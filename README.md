@@ -108,10 +108,10 @@ La fonction `calculer_devis()` est **déterministe et ne doit jamais être appel
 
 | Membre | Rôle |
 |--------|------|
-| Giovanni | `calculer_devis()`, route `/api/agent`, dashboard |
-| Paul | Init Next.js, tools agent IA, relances |
-| Sarah | Maquettes, interface prospect, documentation équipes |
-| Béni | Supabase, génération PDF, documentation technique |
+| Giovanni | `calculer_devis()`, tools agent IA, relances & tests finaux |
+| Béni | Supabase, route `/api/agent`, dashboard direction |
+| Paul | Init Next.js, interface prospect, documentation équipes |
+| Sarah | Maquettes & flow agent, génération PDF, documentation technique |
 
 ## Calendrier
 
