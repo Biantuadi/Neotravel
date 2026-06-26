@@ -58,3 +58,53 @@ export interface ResultatDevis {
   coefficients: Record<string, number>
   devise: 'EUR'
 }
+
+// ─── Tables Supabase ─────────────────────────────────────────────────────────
+
+export interface DevisDB {
+  id: string
+  created_at: string
+  demande_id: string
+  prix_ht: number
+  tva: number
+  prix_ttc: number
+  devise: 'EUR'
+  lignes: LigneDevis[]
+  pdf_url?: string
+  envoye_le?: string
+}
+
+export interface Relance {
+  id: string
+  created_at: string
+  demande_id: string
+  type: 'relance_1' | 'relance_2'
+  envoyee_le?: string
+  statut: StatutRelance
+}
+
+export interface Log {
+  id: string
+  created_at: string
+  demande_id?: string
+  action: string
+  outil_utilise?: string
+  erreur?: string
+}
+
+export interface Client {
+  id: string
+  created_at: string
+  nom: string
+  email?: string
+  telephone?: string
+  type_client?: TypeClient
+  nb_demandes: number
+  derniere_demande?: string
+}
+
+// ─── Réponses API ─────────────────────────────────────────────────────────────
+
+export type ApiResponse<T> =
+  | { success: true; data: T }
+  | { success: false; error: string }
