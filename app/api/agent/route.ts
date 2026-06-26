@@ -2,10 +2,12 @@ import { anthropic } from '@ai-sdk/anthropic'
 import { streamText, tool, isStepCount } from 'ai'
 import { z } from 'zod'
 import { calculerDevis } from '@/lib/calculer-devis'
-import type { ParamsDevis } from '@/lib/calculer-devis'
+import type { Devis, ParamsDevis } from '@/lib/calculer-devis'
+import { envoyerEmailDevis } from '@/lib/email-devis'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export const maxDuration = 60
+export const runtime = 'nodejs'
 
 const SYSTEM_PROMPT = `Tu es l'assistant commercial de NeoTravel, une entreprise de transport de groupes en autocar.
 
@@ -67,6 +69,45 @@ const escaladerHumainParams = z.object({
   demande_id: z.string().uuid().optional(),
   raison: z.string().describe('Pourquoi ce cas nécessite une intervention humaine'),
   contexte: z.string().describe('Résumé du dossier pour le commercial'),
+})
+
+const devisParams = z.object({
+  prixHT: z.number(),
+  tva: z.number(),
+  prixTTC: z.number(),
+  devise: z.literal('EUR'),
+  lignes: z.array(z.object({
+    libelle: z.string(),
+    montant: z.number(),
+  })),
+  coefficients: z.object({
+    saison: z.object({
+      niveau: z.string(),
+      valeur: z.number(),
+    }),
+    urgence: z.object({
+      code: z.string(),
+      valeur: z.number(),
+    }),
+    capacite: z.object({
+      tranche: z.string(),
+      valeur: z.number(),
+    }),
+  }),
+})
+
+const envoyerEmailParams = z.object({
+  demande_id: z.string().uuid().optional(),
+  reference: z.string().optional(),
+  prospect: z.object({
+    nom: z.string().describe('Nom complet du prospect'),
+    email: z.string().email().describe('Email du prospect'),
+    telephone: z.string().optional(),
+    depart: z.string().optional(),
+    destination: z.string().optional(),
+    dateDepart: z.string().optional(),
+  }),
+  devis: devisParams,
 })
 
 export async function POST(req: Request) {
@@ -149,6 +190,58 @@ export async function POST(req: Request) {
           return {
             success: true,
             message: 'Dossier transmis à l\'équipe commerciale. Un conseiller vous contactera sous 24h.',
+          }
+        },
+      }),
+
+      envoyer_email: tool({
+        description: 'Envoie le devis au prospect par email avec le PDF du devis en piece jointe.',
+        inputSchema: envoyerEmailParams,
+        execute: async (params: z.infer<typeof envoyerEmailParams>) => {
+          try {
+            const currentDemandeId = params.demande_id ?? demande_id
+            const reference = params.reference ?? (
+              currentDemandeId ? `NEO-${currentDemandeId.slice(0, 8).toUpperCase()}` : undefined
+            )
+
+            const emailResult = await envoyerEmailDevis({
+              prospect: params.prospect,
+              devis: params.devis as Devis,
+              reference,
+            })
+
+            if (currentDemandeId) {
+              await supabaseAdmin.from('devis').insert({
+                demande_id: currentDemandeId,
+                montant_ht: params.devis.prixHT,
+                montant_ttc: params.devis.prixTTC,
+                lignes_detail: params.devis.lignes,
+                date_envoi: new Date().toISOString(),
+                statut: 'envoye',
+              })
+
+              await supabaseAdmin
+                .from('demandes')
+                .update({ statut: 'devis_envoye', updated_at: new Date().toISOString() })
+                .eq('id', currentDemandeId)
+
+              await supabaseAdmin.from('logs').insert({
+                demande_id: currentDemandeId,
+                action: 'envoyer_email_devis',
+                outil_utilise: 'envoyer_email()',
+              })
+            }
+
+            return {
+              success: true,
+              email_id: emailResult.id,
+              message: 'Email de devis envoye avec PDF en piece jointe.',
+            }
+          } catch (error) {
+            return {
+              success: false,
+              error: error instanceof Error ? error.message : 'Erreur inconnue lors de l\'envoi du devis.',
+            }
           }
         },
       }),

@@ -1,24 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NeoTravel
+
+Application Next.js pour qualifier des demandes de transport de groupe, calculer un devis, envoyer le devis par email et suivre les demandes dans Supabase.
 
 ## Getting Started
 
-First, run the development server:
+Installer les dependances puis lancer le serveur de developpement :
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Variables d'environnement
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Creer un fichier `.env.local` avec :
+
+```bash
+ANTHROPIC_API_KEY=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+RESEND_API_KEY=
+RESEND_FROM_EMAIL="NeoTravel <onboarding@resend.dev>"
+```
+
+`RESEND_FROM_EMAIL` peut etre remplace par une adresse verifiee dans Resend.
+
+## Devis PDF
+
+La generation PDF est centralisee dans `lib/devis-pdf.ts`.
+
+Le PDF contient :
+
+- montant HT, TVA et TTC ;
+- detail des lignes du devis ;
+- coefficients appliques ;
+- coordonnees du prospect ;
+- reference du devis.
+
+L'envoi email est centralise dans `lib/email-devis.ts`. La route `app/api/agent/route.ts` expose le tool `envoyer_email`, qui genere le PDF, l'attache a l'email Resend, cree une ligne dans `devis`, met la demande en statut `devis_envoye` et ajoute un log.
+
+## Modifier le pricing
+
+La logique de calcul est dans `lib/calculer-devis.ts`.
+
+Les constantes a modifier en priorite sont :
+
+- `PRIX_PAR_KM`
+- `PRIX_MINIMUM`
+- `DISTANCE_MAX_KM`
+- `TVA`
+- `MARGE`
+- `PRIX_GUIDE_JOUR`
+- `PRIX_NUIT_CHAUFFEUR`
+- `CAPACITE_MAX`
+
+Les coefficients sont dans `coefSaison`, `coefUrgence` et `coefCapacite`.
+
+## Changer le prompt systeme
+
+Le prompt de l'agent est la constante `SYSTEM_PROMPT` dans `app/api/agent/route.ts`.
+
+## Ajouter un statut
+
+Ajouter le statut dans :
+
+- `neotravel_migration.sql`, enum `statut_demande` ;
+- `types/index.ts`, type `StatutDemande` ;
+- `app/api/agent/route.ts`, schema `mettreAJourStatutParams`.
+
+## Tests
+
+Les tests Jest du calcul de devis sont dans `__tests__/calculer-devis.test.ts`.
+
+```bash
+npm test
+```
 
 ## Learn More
 
