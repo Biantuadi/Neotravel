@@ -2,6 +2,7 @@ import { anthropic } from '@ai-sdk/anthropic'
 import { streamText, tool, isStepCount } from 'ai'
 import { z } from 'zod'
 import { calculerDevis } from '@/lib/calculer-devis'
+import type { ParamsDevis } from '@/lib/calculer-devis'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export const maxDuration = 60
@@ -30,11 +31,16 @@ CHAMPS OPTIONNELS :
 - Péages`
 
 const calculerDevisParams = z.object({
-  nb_passagers: z.number().int().positive().describe('Nombre de passagers'),
-  date_depart: z.string().describe('Date de départ au format YYYY-MM-DD'),
-  date_demande: z.string().describe('Date d\'aujourd\'hui au format YYYY-MM-DD'),
-  distance_km: z.number().positive().describe('Distance en kilomètres'),
-  options: z.array(z.enum(['guide', 'nuit_chauffeur', 'peages'])).describe('Options supplémentaires'),
+  nbPassagers: z.number().int().min(1).max(85).describe('Nombre de passagers'),
+  distanceKm: z.number().positive().max(1500).describe('Distance en kilomètres'),
+  dateDemande: z.string().describe('Date de la demande au format YYYY-MM-DD'),
+  dateDepart: z.string().describe('Date de départ au format YYYY-MM-DD'),
+  typeVehicule: z.string().optional().describe('Type de véhicule souhaité'),
+  options: z.object({
+    guideJours: z.number().int().min(0).optional().describe('Nombre de jours avec guide'),
+    nuitsChauffeur: z.number().int().min(0).optional().describe('Nombre de nuits chauffeur'),
+    peages: z.number().min(0).optional().describe('Montant forfaitaire des péages en €'),
+  }).optional().describe('Options supplémentaires'),
 })
 
 const enregistrerLeadParams = z.object({
@@ -76,7 +82,7 @@ export async function POST(req: Request) {
         description: 'Calcule le prix d\'un devis de transport de groupe de manière déterministe. Appeler uniquement quand toutes les infos sont collectées.',
         inputSchema: calculerDevisParams,
         execute: async (params: z.infer<typeof calculerDevisParams>) => {
-          const resultat = calculerDevis(params)
+          const resultat = calculerDevis(params as ParamsDevis)
 
           if (demande_id) {
             await supabaseAdmin.from('logs').insert({
