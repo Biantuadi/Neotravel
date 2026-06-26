@@ -35,29 +35,9 @@ export interface Demande {
   updated_at: string
 }
 
-export interface ParamsDevis {
-  nb_passagers: number
-  date_depart: string       // ISO date
-  date_demande: string      // ISO date
-  distance_km: number
-  options: OptionDevis[]
-}
-
-export type OptionDevis = 'guide' | 'nuit_chauffeur' | 'peages'
-
-export interface LigneDevis {
-  libelle: string
-  montant: number
-}
-
-export interface ResultatDevis {
-  prix_ht: number
-  tva: number
-  prix_ttc: number
-  lignes: LigneDevis[]
-  coefficients: Record<string, number>
-  devise: 'EUR'
-}
+// Types de pricing — source de vérité dans lib/calculer-devis.ts
+import type { LigneDevis } from '@/lib/calculer-devis'
+export type { ParamsDevis, LigneDevis, Devis } from '@/lib/calculer-devis'
 
 // ─── Tables Supabase ─────────────────────────────────────────────────────────
 
