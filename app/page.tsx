@@ -3,6 +3,7 @@
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, UIMessage } from 'ai'
 import { useState, useRef, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
 
 const INITIAL_MESSAGES: UIMessage[] = [
   {
@@ -137,9 +138,9 @@ export default function HomePage() {
                   <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                     isUser
                       ? 'bg-green-700 text-white rounded-br-sm'
-                      : 'bg-gray-50 text-zinc-800 rounded-bl-sm shadow-sm'
+                      : 'bg-gray-50 text-zinc-800 rounded-bl-sm shadow-sm prose prose-sm prose-zinc max-w-none'
                   }`}>
-                    {text}
+                    {isUser ? text : <ReactMarkdown>{text}</ReactMarkdown>}
                   </div>
                 </div>
               )
