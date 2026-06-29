@@ -130,17 +130,19 @@ const DESTINATIONS = [
 const CATEGORIES = ['Tous', 'Asie', 'Europe', 'Amériques', 'Afrique', 'Océanie']
 
 // ─────────────────────────────────────────────────────────
-// Chat hook
+// Chat hook — branché sur /api/chat (outils complets + Supabase)
 // ─────────────────────────────────────────────────────────
 
 interface ChatMsg { role: 'user' | 'assistant'; content: string }
 
 function useChatHook() {
   const [msgs, setMsgs] = useState<ChatMsg[]>([
-    { role: 'assistant', content: 'Bonjour ! Je suis votre assistant NeoTravel. Quel trajet souhaitez-vous organiser ?' },
+    { role: 'assistant', content: 'Bonjour ! Je suis votre assistant NeoTravel. Pour vous établir un devis, pouvez-vous me donner votre ville de départ et votre destination ?' },
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  // demande_id retourné par enregistrer_lead, transmis à chaque appel suivant
+  const demandeIdRef = useRef<string | undefined>(undefined)
 
   const send = useCallback(async (text?: string) => {
     const content = (text ?? input).trim()
@@ -154,7 +156,10 @@ function useChatHook() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next.map(m => ({ role: m.role, content: m.content })) }),
+        body: JSON.stringify({
+          messages:   next.map(m => ({ role: m.role, content: m.content })),
+          demande_id: demandeIdRef.current,
+        }),
       })
       const reader = res.body?.getReader()
       const dec = new TextDecoder()
@@ -164,7 +169,13 @@ function useChatHook() {
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
-          buf += dec.decode(value, { stream: true })
+          const chunk = dec.decode(value, { stream: true })
+
+          // Détecter demande_id dans le flux (injecté par l'outil enregistrer_lead)
+          const idMatch = chunk.match(/\[DEMANDE_ID:([a-f0-9-]{36})\]/)
+          if (idMatch) demandeIdRef.current = idMatch[1]
+
+          buf += chunk.replace(/\[DEMANDE_ID:[a-f0-9-]{36}\]/g, '')
           setMsgs(prev => {
             const u = [...prev]
             u[u.length - 1] = { role: 'assistant', content: buf }
@@ -179,7 +190,12 @@ function useChatHook() {
     }
   }, [msgs, input, loading])
 
-  return { msgs, input, setInput, loading, send }
+  // Permet de pré-injecter un message (depuis la search bar)
+  const sendPrefilled = useCallback((text: string) => {
+    send(text)
+  }, [send])
+
+  return { msgs, input, setInput, loading, send, sendPrefilled }
 }
 
 // ─────────────────────────────────────────────────────────
