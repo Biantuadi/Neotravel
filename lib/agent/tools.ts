@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { calculerDevis } from '@/lib/calculer-devis'
 import type { ParamsDevis } from '@/lib/calculer-devis'
 import { supabaseAdmin } from '@/lib/supabase'
+import { envoyerEmailDevis } from '@/lib/email-devis'
 
 export const tools = (demande_id?: string) => ({
   calculer_devis: tool({
@@ -75,6 +76,67 @@ export const tools = (demande_id?: string) => ({
         .update({ statut, updated_at: new Date().toISOString() })
         .eq('id', demande_id)
       return { success: !error, error: error?.message }
+    },
+  }),
+
+  envoyer_devis_par_email: tool({
+    description: 'Génère le PDF du devis et l\'envoie par email au prospect. Appeler après avoir affiché le montant et obtenu l\'email du prospect.',
+    inputSchema: z.object({
+      nom_prospect: z.string().describe('Nom du prospect'),
+      email:        z.string().email().describe('Email du prospect'),
+      depart:       z.string().optional().describe('Ville de départ'),
+      destination:  z.string().optional().describe('Ville de destination'),
+      // Paramètres du devis — pour recalculer et générer le PDF
+      nbPassagers:  z.number().int().min(1).max(85),
+      distanceKm:   z.number().positive().max(1500),
+      dateDemande:  z.string().describe('Date de la demande YYYY-MM-DD'),
+      dateDepart:   z.string().describe('Date de départ YYYY-MM-DD'),
+      options: z.object({
+        guideJours:     z.number().int().min(0).optional(),
+        nuitsChauffeur: z.number().int().min(0).optional(),
+        peages:         z.number().min(0).optional(),
+      }).optional(),
+    }),
+    execute: async (params) => {
+      const devis = calculerDevis({
+        nbPassagers: params.nbPassagers,
+        distanceKm:  params.distanceKm,
+        dateDemande: params.dateDemande,
+        dateDepart:  params.dateDepart,
+        options:     params.options,
+      })
+
+      const reference = `NEO-${Date.now()}`
+
+      await envoyerEmailDevis({
+        prospect: {
+          nom:         params.nom_prospect,
+          email:       params.email,
+          depart:      params.depart,
+          destination: params.destination,
+          dateDepart:  params.dateDepart,
+        },
+        devis,
+        reference,
+      })
+
+      if (demande_id) {
+        await supabaseAdmin.from('logs').insert({
+          demande_id,
+          action: 'devis_envoye_email',
+          outil_utilise: 'envoyer_devis_par_email()',
+        })
+        await supabaseAdmin
+          .from('demandes')
+          .update({ statut: 'devis_envoye', updated_at: new Date().toISOString() })
+          .eq('id', demande_id)
+      }
+
+      return {
+        success: true,
+        reference,
+        message: `Devis ${reference} envoyé par email à ${params.email}.`,
+      }
     },
   }),
 

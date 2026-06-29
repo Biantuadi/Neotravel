@@ -275,7 +275,11 @@ Modifier les fichiers suivants :
 
 Si le statut doit etre visible dans un futur dashboard, l'ajouter aussi dans la page dashboard correspondante.
 
-## Changer le prompt de l'agent
+## Ressources
+
+- **Figma** : [NeoTravel — Maquette Site Web](https://www.figma.com/design/gpKMpdgnx2Vkh3eeqypJAN/NEOTRAVEL-%E2%80%94-Maquette-Site-Web--copie-?node-id=0-1&p=f&t=1MI9omxJKytwja2W-0)
+
+## Équipe
 
 Modifier la constante `SYSTEM_PROMPT` dans :
 
