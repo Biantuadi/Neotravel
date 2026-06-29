@@ -392,6 +392,37 @@ npx vercel --prod
 
 Les variables d'environnement sont à renseigner dans Vercel > Settings > Environment Variables (les mêmes que `.env.local`).
 
+## Backlog — Prochaines évolutions
+
+### P1 — Corrections immédiates
+
+| # | Sujet | Description |
+|---|-------|-------------|
+| P1-1 | Fix table `clients` | L'override `enregistrer_lead` dans `/api/chat/route.ts` n'insère pas dans `clients`. La page Dashboard > Clients reste vide. |
+| P1-2 | Déploiement Edge Function | La fonction `relancer-prospect` est écrite mais pas encore déployée sur Supabase. Activer aussi pg_cron + pg_net. |
+| P1-3 | Authentification dashboard | Le dashboard `/dashboard` est accessible sans login. Protéger avec Supabase Auth ou middleware Next.js. |
+| P1-4 | Test bout-en-bout | Valider le parcours complet en conditions réelles : chat → lead → devis → email → relance → dashboard. |
+
+### P2 — Améliorations prioritaires (prochaine itération)
+
+| # | Sujet | Description |
+|---|-------|-------------|
+| P2-1 | Acceptation devis en ligne | Ajouter un lien "J'accepte ce devis" dans l'email → page de confirmation → statut `accepte` automatique. |
+| P2-2 | Calcul distance automatique | Intégrer l'API OpenRouteService ou Google Maps pour calculer `distanceKm` sans le demander au prospect. |
+| P2-3 | Notification commerciaux | Envoyer un email interne à l'équipe quand une demande passe en `cas_complexe` ou `accepte`. |
+| P2-4 | Relances SMS / WhatsApp | Le canal est déjà prévu dans le schéma (`canal_relance enum`). Brancher Twilio ou WhatsApp Business API. |
+| P2-5 | Historique client | Afficher toutes les demandes d'un client dans la fiche client du dashboard. |
+
+### P3 — Évolutions futures
+
+| # | Sujet | Description |
+|---|-------|-------------|
+| P3-1 | Module facturation | Générer une facture PDF depuis un devis accepté et l'envoyer automatiquement. |
+| P3-2 | Chatbot multicanal | Déployer l'agent sur WhatsApp Business ou Messenger (groupes scolaires, associations). |
+| P3-3 | Multi-langue | Traduire le chat prospect en anglais et espagnol pour les groupes internationaux. |
+| P3-4 | Analytics avancés | Tableau de bord taux de conversion, revenue prévisionnel, coût d'acquisition par canal. |
+| P3-5 | Intégration CRM externe | Synchronisation bidirectionnelle avec HubSpot ou Salesforce pour les équipes commerciales avancées. |
+
 ## Edge Functions — Relances automatiques
 
 La fonction `supabase/functions/relancer-prospect/` gère les relances prospects en 3 étapes :
