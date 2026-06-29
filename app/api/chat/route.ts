@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
   let capturedDemandeId: string | undefined = demande_id as string | undefined
 
-  // Use base tools, but override enregistrer_lead to capture demande_id
+  // Use base tools, but override enregistrer_lead to capture the demande_id in this closure
   const baseTools = makeTools(capturedDemandeId)
 
   const allTools = {
@@ -38,17 +38,51 @@ export async function POST(req: Request) {
       execute: async (params) => {
         const champs = ['nom_prospect', 'email', 'telephone', 'nb_passagers', 'depart', 'destination', 'date_depart']
         const score = Math.round(champs.filter(c => params[c as keyof typeof params] != null).length / champs.length * 100)
+        const now = new Date().toISOString()
+
+        // Upsert client (même logique que tools.ts)
+        let client_id: string | null = null
+        if (params.email) {
+          const { data: existing } = await supabaseAdmin
+            .from('clients')
+            .select('id, nb_demandes')
+            .eq('email', params.email)
+            .maybeSingle()
+
+          if (existing) {
+            await supabaseAdmin.from('clients').update({
+              nom: params.nom_prospect,
+              telephone: params.telephone ?? undefined,
+              nb_demandes: existing.nb_demandes + 1,
+              derniere_demande: now,
+              updated_at: now,
+            }).eq('id', existing.id)
+            client_id = existing.id
+          } else {
+            const { data: created } = await supabaseAdmin
+              .from('clients')
+              .insert({ nom: params.nom_prospect, email: params.email, telephone: params.telephone ?? null, nb_demandes: 1, derniere_demande: now })
+              .select('id').single()
+            client_id = created?.id ?? null
+          }
+        } else {
+          const { data: created } = await supabaseAdmin
+            .from('clients')
+            .insert({ nom: params.nom_prospect, telephone: params.telephone ?? null, nb_demandes: 1, derniere_demande: now })
+            .select('id').single()
+          client_id = created?.id ?? null
+        }
 
         const { data, error } = await supabaseAdmin
           .from('demandes')
-          .insert({ ...params, statut: 'nouveau_lead', score_completude: score })
+          .insert({ ...params, client_id, statut: 'nouveau_lead', score_completude: score })
           .select('id')
           .single()
 
         if (error) return { success: false, error: error.message }
 
         capturedDemandeId = data.id
-        return { success: true, demande_id: data.id }
+        return { success: true, demande_id: data.id, client_id }
       },
     }),
   }
