@@ -90,44 +90,44 @@ const IconMapPin = () => (
 
 const DESTINATIONS = [
   {
-    id: 1, name: 'Bali, Indonésie', country: 'Indonésie', price: '890',
-    badge: 'Populaire', badgeColor: '#ef4444', rating: '4.9', reviews: 248,
-    category: 'Asie', duration: '10 jours',
-    img: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=900&q=85&auto=format&fit=crop',
+    id: 1, name: 'Paris & Île-de-France', country: 'France', price: '18',
+    badge: 'Populaire', badgeColor: '#ef4444', rating: '4.9', reviews: 412,
+    category: 'Île-de-France', duration: 'Journée / week-end',
+    img: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=900&q=85&auto=format&fit=crop',
   },
   {
-    id: 2, name: 'Kyoto, Japon', country: 'Japon', price: '1 240',
-    badge: 'Coup de cœur', badgeColor: '#8b5cf6', rating: '4.9', reviews: 312,
-    category: 'Asie', duration: '8 jours',
-    img: 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=900&q=85&auto=format&fit=crop',
+    id: 2, name: 'Côte d\'Azur', country: 'France', price: '24',
+    badge: 'Coup de cœur', badgeColor: '#8b5cf6', rating: '4.9', reviews: 287,
+    category: 'Sud', duration: 'Week-end / séjour',
+    img: 'https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=900&q=85&auto=format&fit=crop',
   },
   {
-    id: 3, name: 'Santorini, Grèce', country: 'Grèce', price: '750',
-    badge: 'Tendance', badgeColor: '#0ea5e9', rating: '4.9', reviews: 189,
-    category: 'Europe', duration: '7 jours',
-    img: 'https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?w=900&q=85&auto=format&fit=crop',
+    id: 3, name: 'Bordeaux & Vignobles', country: 'France', price: '21',
+    badge: 'Tendance', badgeColor: '#0ea5e9', rating: '4.8', reviews: 193,
+    category: 'Sud-Ouest', duration: 'Week-end',
+    img: 'https://images.unsplash.com/photo-1589802829985-817e51171b92?w=900&q=85&auto=format&fit=crop',
   },
   {
-    id: 4, name: 'Marrakech, Maroc', country: 'Maroc', price: '490',
-    badge: 'Promo', badgeColor: '#f97316', rating: '4.8', reviews: 156,
-    category: 'Afrique', duration: '5 jours',
-    img: 'https://images.unsplash.com/photo-1597212618440-806262de4f6b?w=900&q=85&auto=format&fit=crop',
+    id: 4, name: 'Mont-Saint-Michel', country: 'France', price: '19',
+    badge: 'Promo', badgeColor: '#f97316', rating: '4.8', reviews: 341,
+    category: 'Normandie', duration: 'Journée',
+    img: 'https://images.unsplash.com/photo-1589477173271-6f4e1d9e4b0e?w=900&q=85&auto=format&fit=crop',
   },
   {
-    id: 5, name: 'New York, USA', country: 'États-Unis', price: '1 090',
-    badge: 'Nouveau', badgeColor: '#10b981', rating: '4.8', reviews: 421,
-    category: 'Amériques', duration: '8 jours',
-    img: 'https://images.unsplash.com/photo-1534430480872-3498386e7856?w=900&q=85&auto=format&fit=crop',
+    id: 5, name: 'Alsace & Route des Vins', country: 'France', price: '22',
+    badge: 'Nouveau', badgeColor: '#10b981', rating: '4.9', reviews: 158,
+    category: 'Grand Est', duration: 'Week-end',
+    img: 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=900&q=85&auto=format&fit=crop',
   },
   {
-    id: 6, name: 'Sydney, Australie', country: 'Australie', price: '1 580',
-    badge: 'Premium', badgeColor: '#6366f1', rating: '4.9', reviews: 97,
-    category: 'Océanie', duration: '12 jours',
-    img: 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=900&q=85&auto=format&fit=crop',
+    id: 6, name: 'Vallée de la Loire', country: 'France', price: '20',
+    badge: 'Premium', badgeColor: '#6366f1', rating: '4.9', reviews: 224,
+    category: 'Centre-Val de Loire', duration: 'Journée / week-end',
+    img: 'https://images.unsplash.com/photo-1562690868-60bbe7293e94?w=900&q=85&auto=format&fit=crop',
   },
 ]
 
-const CATEGORIES = ['Tous', 'Asie', 'Europe', 'Amériques', 'Afrique', 'Océanie']
+const CATEGORIES = ['Tous', 'Île-de-France', 'Sud', 'Sud-Ouest', 'Normandie', 'Grand Est', 'Centre-Val de Loire']
 
 // ─────────────────────────────────────────────────────────
 // Chat hook — branché sur /api/chat (outils complets + Supabase)
@@ -827,8 +827,8 @@ function DestCard({ dest, onBook }: { dest: typeof DESTINATIONS[0]; onBook: (d: 
             </div>
           </div>
           <div className="text-right flex-shrink-0">
-            <p className="text-[11px] text-[#9e9e9e]">à partir de</p>
-            <p className="text-[#2e7d32] font-extrabold text-[19px] leading-tight">{dest.price} €</p>
+            <p className="text-[11px] text-[#9e9e9e]">dès {dest.price} €</p>
+            <p className="text-[#2e7d32] font-extrabold text-[14px] leading-tight">/ pers.</p>
           </div>
         </div>
 
@@ -1101,7 +1101,7 @@ export default function HomePage() {
 
   const handleDestBook = useCallback((dest: typeof DESTINATIONS[0]) => {
     setChatOpen(true)
-    const msg = `Bonjour ! Je suis intéressé par un voyage de groupe à ${dest.name} (${dest.country}), durée indicative ${dest.duration}. Pouvez-vous me préparer un devis de transport ?`
+    const msg = `Bonjour ! Je souhaite organiser un transport de groupe vers ${dest.name} (${dest.category}), durée indicative : ${dest.duration}. Pouvez-vous me préparer un devis ?`
     setTimeout(() => chatState.sendPrefilled(msg), 80)
   }, [chatState])
 
