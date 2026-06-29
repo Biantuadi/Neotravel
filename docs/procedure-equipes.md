@@ -1,7 +1,7 @@
 # NeoTravel — Procédure équipes commerciales
 
-**Version :** 1.0  
-**Date :** 26 juin 2026  
+**Version :** 1.1  
+**Date :** 29 juin 2026  
 **Public :** Équipes commerciales et opérationnelles NeoTravel
 
 ---
@@ -24,17 +24,20 @@ NeoTravel permet à vos clients d'obtenir un devis transport de groupe en moins 
    - Destination
    - Date de départ
    - Nombre de passagers
-   - Distance approximative (si non connue, le client peut l'estimer)
+   - Distance en km (l'assistant la demande explicitement — il ne l'estime jamais)
    - Options éventuelles : guide/accompagnateur, nuit chauffeur, péages
-5. Une fois toutes les informations collectées, l'assistant calcule et affiche le devis automatiquement.
+5. Une fois toutes les informations collectées, l'assistant calcule et affiche le montant TTC.
+6. L'assistant propose ensuite d'envoyer le devis détaillé **par email en PDF**. Si le client accepte et fournit son adresse email, il reçoit le document avec une référence unique (ex : NEO-1234567890).
 
 ### Ce que vous voyez de votre côté (tableau de bord)
 
-Dès qu'un prospect a échangé avec le chat, une nouvelle entrée apparaît dans votre tableau de bord commercial, avec :
-- Le nom du prospect et ses coordonnées (si renseignés)
-- Le trajet demandé (départ → destination)
-- La date de départ
-- Le statut actuel du dossier
+Le tableau de bord direction affiche une vue agrégée en temps réel :
+- **KPIs** : nombre de leads du jour, taux de conversion, délai moyen de réponse, relances en attente
+- **Pipeline** : devis envoyés / acceptés / refusés
+- **Automatisation** : part des dossiers traités par l'IA vs repris par un humain
+- **Relances** : indicateurs d'envoi et taux de réponse
+
+La section **Demandes** (menu latéral) liste les dossiers individuels avec leur statut.
 
 **Vous n'avez rien à faire à ce stade** — l'assistant gère tout jusqu'au devis.
 
@@ -50,8 +53,8 @@ Dès qu'un prospect a échangé avec le chat, une nouvelle entrée apparaît dan
 | **Incomplet** | Le client n'a pas fourni toutes les infos | Aucune — une relance automatique est programmée |
 | **Qualifié** | Toutes les infos sont là, devis calculé | Vous pouvez relire et valider le devis |
 | **Devis envoyé** | Le devis a été transmis au client | Suivre la réponse |
-| **Relance J+2** | Relance automatique envoyée 2 jours après | Aucune — surveiller le tableau |
-| **Relance J+3 / J+7** | Deuxième relance automatique | Aucune — surveiller le tableau |
+| **Relance 1** | Première relance automatique (J+2 urgent / J+3 standard) | Aucune — surveiller le tableau |
+| **Relance 2** | Deuxième relance automatique (J+7) | Aucune — surveiller le tableau |
 | **Accepté** | Le client a dit oui | Traiter la commande |
 | **Refusé** | Le client a décliné | Clôturer le dossier |
 | **Cas complexe** | L'assistant a escaladé — intervention humaine requise | **Vous devez reprendre ce dossier** (voir section 3) |
@@ -126,8 +129,8 @@ Ces relances sont envoyées **sans action de votre part**. Si un client répond 
 
 ## 5. Questions fréquentes
 
-**Le client dit qu'il n'a pas reçu son devis.**  
-Vérifiez que l'email est bien renseigné dans le dossier (colonne Email). Si l'email est vide, le client n't pas fourni ses coordonnées pendant le chat. Contactez-le par téléphone si disponible.
+**Le client dit qu'il n'a pas reçu son devis par email.**  
+Vérifiez que l'email est bien renseigné dans le dossier (colonne Email). Si l'email est vide, le client n'a pas fourni ses coordonnées pendant le chat — le devis lui a été affiché dans la conversation uniquement. Contactez-le par téléphone si disponible pour lui renvoyer le document.
 
 **Le devis affiché semble incorrect.**  
 Les prix sont calculés automatiquement selon le barème NeoTravel (distance, saison, urgence, nombre de passagers). Si vous pensez qu'il y a une erreur, signalez-le à votre responsable technique — ne modifiez pas le dossier directement.

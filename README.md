@@ -6,7 +6,11 @@ Le projet utilise Next.js App Router, TypeScript, Supabase, Vercel AI SDK, Anthr
 
 ## Etat actuel
 
-Fonctionnel dans le code :
+```
+Prospect (chat) → Agent IA (Vercel AI SDK) → calculer_devis() → PDF (pdf-lib) → Email (Resend)
+                                           → Supabase (stockage CRM)
+                                           → Edge Functions Supabase (relances cron J+2/J+3/J+7)
+```
 
 - calcul deterministe du devis dans `lib/calculer-devis.ts` ;
 - tests Jest du calcul dans `__tests__/calculer-devis.test.ts` ;
@@ -18,10 +22,38 @@ Fonctionnel dans le code :
 
 Encore a finaliser selon le planning :
 
-- interface prospect conversationnelle : `app/page.tsx` est encore la page de demarrage Next.js ;
-- dashboard direction ;
-- relances automatiques Supabase Edge Functions ;
-- verification de bout en bout avec les vraies variables d'environnement.
+```
+neotravel/
+├── app/
+│   ├── api/chat/           # Route POST de l'agent IA (streaming texte + tools)
+│   ├── api/agent/          # Route alternative UIMessage (non utilisée en prod)
+│   ├── dashboard/          # Dashboard direction (KPIs Supabase temps réel)
+│   └── page.tsx            # Landing conversationnelle (chat prospect)
+├── lib/
+│   ├── agent/
+│   │   ├── prompt.ts       # Prompt système de l'agent
+│   │   └── tools.ts        # 5 tools : calculer_devis, enregistrer_lead,
+│   │                       #           envoyer_devis_par_email, mettre_a_jour_statut,
+│   │                       #           escalader_humain
+│   ├── calculer-devis.ts   # Fonction de pricing déterministe (ne pas modifier sans tests)
+│   ├── dashboard-data.ts   # Requêtes Supabase pour le dashboard
+│   ├── devis-pdf.ts        # Génération du PDF avec pdf-lib
+│   ├── email-devis.ts      # Envoi email avec Resend (PDF en pièce jointe)
+│   └── supabase.ts         # Clients Supabase (public + admin)
+├── types/
+│   └── index.ts            # Types TypeScript partagés (Demande, DevisDB, Log…)
+├── docs/
+│   ├── procedure-equipes.html  # Guide utilisateur équipes commerciales
+│   └── procedure-equipes.md
+├── supabase/
+│   └── functions/
+│       └── relancer-prospect/  # Edge Function cron (relances J+2 / J+5 / J+7)
+│           ├── index.ts
+│           └── cron-setup.sql  # Script pg_cron à exécuter dans Supabase SQL Editor
+├── neotravel_migration.sql # Schéma BDD complet — à exécuter dans Supabase SQL Editor
+└── __tests__/
+    └── calculer-devis.test.ts  # 12 tests Jest sur la fonction de pricing
+```
 
 ## Installation
 
@@ -269,11 +301,122 @@ Puis ajuster les valeurs attendues dans `__tests__/calculer-devis.test.ts` si la
 
 Modifier les fichiers suivants :
 
-- `neotravel_migration.sql`, enum `statut_demande` ;
-- `types/index.ts`, type `StatutDemande` ;
-- `app/api/agent/route.ts`, schema `mettreAJourStatutParams`.
+## Guide du repreneur
 
-Si le statut doit etre visible dans un futur dashboard, l'ajouter aussi dans la page dashboard correspondante.
+Cette section explique comment modifier les éléments clés du projet sans tout casser.
+
+### Modifier le pricing
+
+Tout le calcul de prix est dans `lib/calculer-devis.ts`. Les constantes sont en haut du fichier :
+
+```ts
+const PRIX_PAR_KM = 2.5        // € par km
+const PRIX_MINIMUM = 350        // € plancher par trajet
+const DISTANCE_MAX_KM = 1500   // au-delà = hors zone, escalade humaine
+const TVA = 0.10                // 10 %
+const MARGE = 0.15              // marge commerciale 15 %
+const PRIX_GUIDE_JOUR = 80      // € par jour de guide
+const PRIX_NUIT_CHAUFFEUR = 120 // € par nuit chauffeur
+const CAPACITE_MAX = 85         // au-delà = escalade humaine
+```
+
+Les coefficients sont dans trois fonctions exportées (`coefSaison`, `coefUrgence`, `coefCapacite`). Modifier leurs valeurs change directement les prix calculés.
+
+**Après toute modification du pricing, relancer les tests :**
+```bash
+npm test
+```
+Les 12 tests vérifient les cas nominaux et les cas limites. S'ils passent, le pricing est cohérent.
+
+---
+
+### Modifier le comportement de l'agent IA
+
+Le prompt système est dans `lib/agent/prompt.ts`. C'est un fichier texte — modifier les instructions change directement ce que l'agent dit et fait.
+
+Points clés à ne pas supprimer :
+- La règle "ne jamais calculer un prix soi-même" — le LLM doit toujours passer par `calculer_devis()`
+- La règle "ne jamais estimer la distance" — l'agent doit la demander explicitement
+- Les conditions d'escalade (> 80 passagers, trajet international)
+
+---
+
+### Ajouter un tool à l'agent
+
+Les tools sont dans `lib/agent/tools.ts`. Chaque tool suit cette structure :
+
+```ts
+nom_du_tool: tool({
+  description: 'Ce que fait ce tool (vu par le LLM pour décider quand l\'appeler)',
+  inputSchema: z.object({
+    // paramètres typés avec Zod
+  }),
+  execute: async (params) => {
+    // logique serveur — peut appeler Supabase, Resend, etc.
+    return { ... } // résultat renvoyé au LLM
+  },
+}),
+```
+
+---
+
+### Ajouter un statut de demande
+
+Les statuts sont définis à trois endroits — les trois doivent être mis à jour ensemble :
+
+1. **`types/index.ts`** — type `StatutDemande`
+2. **`neotravel_migration.sql`** — enum `statut_demande` (et dans Supabase via `ALTER TYPE statut_demande ADD VALUE 'nouveau_statut'`)
+3. **`lib/agent/tools.ts`** — schéma Zod dans `mettre_a_jour_statut`
+
+---
+
+### Modifier le template email
+
+Le contenu HTML de l'email est dans `lib/email-devis.ts`, fonction `envoyerEmailDevis`. Le corps du message est dans la propriété `html` de l'appel `resend.emails.send(...)`.
+
+---
+
+### Modifier le PDF généré
+
+La mise en page du PDF est dans `lib/devis-pdf.ts`, fonction `genererDevisPdf`. Le PDF est construit ligne par ligne avec `pdf-lib` — chaque `draw(...)` ajoute un texte, chaque `move(...)` descend le curseur vertical.
+
+---
+
+### Déploiement Vercel
+
+Le projet est déployé manuellement sur Vercel (repo GitHub non connecté). Pour redéployer :
+
+```bash
+npx vercel --prod
+```
+
+Les variables d'environnement sont à renseigner dans Vercel > Settings > Environment Variables (les mêmes que `.env.local`).
+
+## Edge Functions — Relances automatiques
+
+La fonction `supabase/functions/relancer-prospect/` gère les relances prospects en 3 étapes :
+
+| Étape | Déclencheur | Action |
+|-------|-------------|--------|
+| Relance 1 | J+2 après `devis_envoye` | Email de suivi + statut → `relance_1` |
+| Relance 2 | J+3 après `relance_1` (= J+5) | Email de dernière relance + statut → `relance_2` |
+| Clôture | J+2 après `relance_2` (= J+7) | Statut → `cloture`, aucun email |
+
+### Déploiement de la Edge Function
+
+```bash
+npx supabase functions deploy relancer-prospect --project-ref bfqkuwbtqqyisjzrjqep
+```
+
+Ajouter les variables d'environnement dans **Supabase > Edge Functions > relancer-prospect > Secrets** :
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL` *(optionnel — défaut : `onboarding@resend.dev`)*
+
+### Activation du cron quotidien
+
+1. Dans Supabase > **Database > Extensions**, activer `pg_cron` et `pg_net`
+2. Dans **SQL Editor**, remplacer `<PROJECT_REF>` dans `supabase/functions/relancer-prospect/cron-setup.sql` et exécuter le script
+3. Le cron se déclenche chaque jour à **08h00 UTC**
 
 ## Ressources
 
