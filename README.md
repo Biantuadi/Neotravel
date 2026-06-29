@@ -107,16 +107,7 @@ Ajouter `RESEND_API_KEY` dans Supabase > Edge Functions > relancer-prospect > Se
 
 > État à la soutenance (1er juillet 2026). Le flux complet est opérationnel : prospect → CRM → devis → email → dashboard → relances.
 
-### P1 — Corrections immédiates
-
-| # | Sujet | État |
-|---|-------|------|
-| P1-1 | Persistance devis/client après conversation | ✅ Résolu — `demande_id` passé via ref mutable aux tools |
-| P1-2 | Calcul distance automatique (ORS) | ✅ Résolu — tool `calculer_distance` + détection international |
-| P1-3 | Edge Function relances | ✅ Déployée — projet `bfqkuwbtqqyisjzrjqep` |
-| P1-4 | Authentification dashboard | 🟡 En cours (Béni) |
-
-### P2 — Améliorations prioritaires
+### P1 — Améliorations prioritaires
 
 | # | Sujet | Description |
 |---|-------|-------------|
@@ -125,7 +116,7 @@ Ajouter `RESEND_API_KEY` dans Supabase > Edge Functions > relancer-prospect > Se
 | P2-3 | Relances SMS / WhatsApp | Canal prévu dans le schéma (`canal_relance enum`) — brancher Twilio |
 | P2-4 | Stockage PDF Supabase | Stocker les PDFs et renseigner `pdf_url` dans `devis` |
 
-### P3 — Évolutions futures
+### P2 — Évolutions futures
 
 | # | Sujet | Description |
 |---|-------|-------------|
