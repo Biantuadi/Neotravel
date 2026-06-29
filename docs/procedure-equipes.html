@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeoTravel — Procédure équipes commerciales</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #f8f9fc;
+    }
+
+    .page {
+      max-width: 820px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+
+    /* ── En-tête ── */
+    .header {
+      background: linear-gradient(135deg, #1a5c38 0%, #2d8653 100%);
+      padding: 40px 48px 36px;
+      color: white;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .logo-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #4ade80;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-dot::after {
+      content: '';
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #bbf7d0;
+      display: block;
+    }
+
+    .logo-name {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .header-meta {
+      display: flex;
+      gap: 20px;
+      font-size: 12px;
+      color: #bbf7d0;
+      font-weight: 500;
+    }
+
+    /* ── Corps ── */
+    .body {
+      padding: 40px 48px 56px;
+    }
+
+    /* ── Intro ── */
+    .intro {
+      background: #f0fdf4;
+      border-left: 4px solid #2d8653;
+      border-radius: 0 8px 8px 0;
+      padding: 18px 22px;
+      margin-bottom: 36px;
+      color: #166534;
+      font-size: 13.5px;
+    }
+
+    /* ── Sections ── */
+    .section {
+      margin-bottom: 40px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e8f5e9;
+    }
+
+    .section-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #2d8653;
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .section-title h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #14532d;
+    }
+
+    h3 {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #1a5c38;
+      margin: 20px 0 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    p {
+      margin-bottom: 10px;
+      color: #374151;
+    }
+
+    /* ── Listes ── */
+    ol, ul {
+      padding-left: 20px;
+      margin-bottom: 12px;
+      color: #374151;
+    }
+
+    li { margin-bottom: 5px; }
+
+    li strong { color: #1a1a2e; }
+
+    /* ── Tableau des statuts ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 20px;
+      font-size: 13px;
+    }
+
+    thead tr {
+      background: #2d8653;
+      color: white;
+    }
+
+    thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    tbody tr:nth-child(even) { background: #f9fafb; }
+    tbody tr:nth-child(odd)  { background: #ffffff; }
+    tbody tr:hover           { background: #f0fdf4; }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: top;
+    }
+
+    td:first-child { font-weight: 600; color: #1a1a2e; white-space: nowrap; }
+    td:last-child  { color: #6b7280; font-size: 12.5px; }
+
+    .badge-action {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-none     { background: #f3f4f6; color: #6b7280; }
+    .badge-watch    { background: #fef3c7; color: #92400e; }
+    .badge-required { background: #fee2e2; color: #991b1b; }
+    .badge-ok       { background: #d1fae5; color: #065f46; }
+
+    /* ── Score / urgence pills ── */
+    .pills {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 10px 0 16px;
+    }
+
+    .pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .pill-red    { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+    .pill-yellow { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+    .pill-green  { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+    .pill-icon   { font-size: 16px; flex-shrink: 0; }
+
+    /* ── Étapes ── */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin: 14px 0;
+    }
+
+    .step {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #e8f5e9;
+      color: #2d8653;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .step-content { flex: 1; }
+    .step-content strong { display: block; color: #1a1a2e; margin-bottom: 3px; font-size: 13.5px; }
+    .step-content p { margin: 0; font-size: 13px; }
+
+    /* ── Citation ── */
+    .quote {
+      background: #f9fafb;
+      border-left: 3px solid #d1d5db;
+      border-radius: 0 6px 6px 0;
+      padding: 12px 16px;
+      margin: 10px 0;
+      color: #4b5563;
+      font-style: italic;
+      font-size: 13px;
+    }
+
+    /* ── Relances timeline ── */
+    .timeline {
+      display: flex;
+      gap: 0;
+      margin: 14px 0;
+    }
+
+    .timeline-item {
+      flex: 1;
+      text-align: center;
+      padding: 14px 10px;
+      border: 1px solid #e5e7eb;
+      position: relative;
+    }
+
+    .timeline-item:first-child { border-radius: 8px 0 0 8px; }
+    .timeline-item:last-child  { border-radius: 0 8px 8px 0; }
+    .timeline-item:not(:last-child) { border-right: none; }
+
+    .timeline-day {
+      font-size: 20px;
+      font-weight: 800;
+      color: #2d8653;
+      display: block;
+    }
+
+    .timeline-label {
+      font-size: 11.5px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+
+    /* ── FAQ ── */
+    .faq-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      background: #f9fafb;
+      padding: 12px 16px;
+      font-weight: 600;
+      font-size: 13.5px;
+      color: #1a1a2e;
+    }
+
+    .faq-a {
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #4b5563;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    /* ── Contacts ── */
+    .contacts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .contact-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+
+    .contact-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #2d8653;
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .contact-name { font-weight: 600; font-size: 13px; color: #1a1a2e; }
+    .contact-role { font-size: 11.5px; color: #6b7280; }
+
+    /* ── Pied de page ── */
+    .footer {
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+      padding: 20px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      color: #9ca3af;
+    }
+
+    @media print {
+      body { background: white; }
+      .page { box-shadow: none; border-radius: 0; margin: 0; max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- En-tête -->
+  <div class="header">
+    <div class="header-logo">
+      <div class="logo-dot"></div>
+      <span class="logo-name">Neotravel</span>
+    </div>
+    <h1>Procédure équipes commerciales</h1>
+    <div class="header-meta">
+      <span>Version 1.0</span>
+      <span>·</span>
+      <span>26 juin 2026</span>
+      <span>·</span>
+      <span>Usage interne — équipes commerciales et opérationnelles</span>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- Intro -->
+    <div class="intro">
+      NeoTravel permet à vos clients d'obtenir un devis transport de groupe en moins d'une heure via un assistant conversationnel disponible 24&nbsp;h/24.
+      <strong>Votre rôle :</strong> valider les devis qualifiés et reprendre les dossiers complexes que l'assistant ne peut pas traiter seul.
+    </div>
+
+    <!-- Section 1 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="section-number">1</div>
+        <h2>Comment un client soumet une demande</h2>
+      </div>
+
+      <h3>Ce que vit le client</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <strong>Arrivée sur la page d'accueil</strong>
+            <p>Un widget de chat s'ouvre avec le message « Bonjour ! Quel trajet souhaitez-vous organiser ? »</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <strong>Choix du type de trajet</strong>
+            <p>Le client sélectionne un raccourci rapide (<em>Aller simple, Aller-retour, Circuit multi-étapes</em>) ou écrit librement.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <strong>Questions de l'assistant</strong>
+            <p>L'assistant pose une question à la fois : ville de départ, destination, date de départ, nombre de passagers, distance, options (guide, nuit chauffeur, péages).</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <strong>Devis automatique</strong>
+            <p>Une fois toutes les informations collectées, l'assistant calcule et affiche le devis. <strong>Vous n'avez rien à faire à ce stade.</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="section-number">2</div>
+        <h2>Lire le tableau de bord commercial</h2>
+      </div>
+
+      <h3>Les statuts de dossier</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Statut</th>
+            <th>Ce que ça signifie</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Nouveau lead</td>
+            <td>Le client vient de démarrer une conversation</td>
+            <td><span class="badge-action badge-none">Aucune</span></td>
+          </tr>
+          <tr>
+            <td>Incomplet</td>
+            <td>Le client n'a pas fourni toutes les infos</td>
+            <td><span class="badge-action badge-none">Relance auto</span></td>
+          </tr>
+          <tr>
+            <td>Qualifié</td>
+            <td>Toutes les infos sont là, devis calculé</td>
+            <td><span class="badge-action badge-watch">À valider</span></td>
+          </tr>
+          <tr>
+            <td>Devis envoyé</td>
+            <td>Le devis a été transmis au client</td>
+            <td><span class="badge-action badge-watch">Surveiller</span></td>
+          </tr>
+          <tr>
+            <td>Relance J+2 / J+7</td>
+            <td>Relances automatiques envoyées</td>
+            <td><span class="badge-action badge-none">Aucune</span></td>
+          </tr>
+          <tr>
+            <td>Accepté</td>
+            <td>Le client a dit oui</td>
+            <td><span class="badge-action badge-ok">Traiter</span></td>
+          </tr>
+          <tr>
+            <td>Refusé</td>
+            <td>Le client a décliné</td>
+            <td><span class="badge-action badge-none">Clôturer</span></td>
+          </tr>
+          <tr>
+            <td>Cas complexe</td>
+            <td>L'assistant a escaladé — intervention humaine requise</td>
+            <td><span class="badge-action badge-required">Vous intervenez</span></td>
+          </tr>
+          <tr>
+            <td>Clôturé</td>
+            <td>Dossier terminé</td>
+            <td><span class="badge-action badge-none">Archivé</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Score de complétude (0 → 100 %)</h3>
+      <div class="pills">
+        <div class="pill pill-red">
+          <span class="pill-icon">🔴</span>
+          <span><strong>Sous 50 %</strong> — Dossier très incomplet, attendre la relance automatique.</span>
+        </div>
+        <div class="pill pill-yellow">
+          <span class="pill-icon">🟡</span>
+          <span><strong>50 à 80 %</strong> — Dossier en cours, l'assistant est probablement encore en conversation.</span>
+        </div>
+        <div class="pill pill-green">
+          <span class="pill-icon">🟢</span>
+          <span><strong>100 %</strong> — Dossier complet, devis disponible.</span>
+        </div>
+      </div>
+
+      <h3>Niveau d'urgence</h3>
+      <div class="pills">
+        <div class="pill pill-red">
+          <span class="pill-icon">⚡</span>
+          <span><strong>Urgente</strong> — Départ dans moins de 7 jours. À traiter en priorité.</span>
+        </div>
+        <div class="pill pill-yellow">
+          <span class="pill-icon">📋</span>
+          <span><strong>Normale</strong> — Départ dans 7 à 90 jours.</span>
+        </div>
+        <div class="pill pill-green">
+          <span class="pill-icon">🗓️</span>
+          <span><strong>Faible</strong> — Départ dans plus de 90 jours.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="section-number">3</div>
+        <h2>Reprendre un cas complexe</h2>
+      </div>
+
+      <p>L'assistant transfère automatiquement le dossier dans deux situations :</p>
+      <ul>
+        <li><strong>Plus de 80 passagers</strong> — dépasse la capacité du barème automatique</li>
+        <li><strong>Trajet international</strong> — sort de la zone de service standard</li>
+      </ul>
+      <p style="margin-bottom: 16px;">Le statut passe à <strong>« Cas complexe »</strong> et vous recevez une notification.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <strong>Ouvrir le dossier dans le tableau de bord</strong>
+            <p>Cliquez sur le dossier marqué "Cas complexe". Vous voyez le résumé de la conversation et la raison de l'escalade.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <strong>Contacter le client</strong>
+            <p>Utilisez l'email ou le téléphone du dossier. Exemple de message :</p>
+            <div class="quote">
+              « Bonjour [Prénom], votre demande de transport depuis NeoTravel a bien été reçue. En raison de la spécificité de votre trajet, notre équipe souhaite vous accompagner directement. Seriez-vous disponible pour un appel ? »
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <strong>Construire le devis manuellement</strong>
+            <p>Pour les cas hors barème, utilisez votre outil habituel ou consultez votre responsable.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <strong>Mettre à jour le statut</strong>
+            <p>Changez le statut dans le tableau de bord selon l'avancement : <em>Devis envoyé → Accepté / Refusé / Clôturé.</em></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="section-number">4</div>
+        <h2>Les relances automatiques</h2>
+      </div>
+
+      <p>Pour les dossiers incomplets, NeoTravel envoie des relances par email sans action de votre part :</p>
+
+      <div class="timeline">
+        <div class="timeline-item">
+          <span class="timeline-day">J+2</span>
+          <div class="timeline-label">Relance courte<br>et amicale</div>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-day">J+3</span>
+          <div class="timeline-label">Deuxième relance<br>si pas de réponse</div>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-day">J+7</span>
+          <div class="timeline-label">Relance finale</div>
+        </div>
+      </div>
+
+      <p><strong>Vous intervenez uniquement si :</strong></p>
+      <ul>
+        <li>Le client vous répond directement par email ou téléphone sans repasser par le chat</li>
+        <li>Le dossier est en statut "Cas complexe"</li>
+        <li>Une relance a échoué (statut "Relance — Échec")</li>
+      </ul>
+    </div>
+
+    <!-- Section 5 -->
+    <div class="section">
+      <div class="section-title">
+        <div class="section-number">5</div>
+        <h2>Questions fréquentes</h2>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Le client dit qu'il n'a pas reçu son devis.</div>
+        <div class="faq-a">Vérifiez que l'email est bien renseigné dans le dossier. Si la colonne Email est vide, le client ne l'a pas fourni pendant le chat — contactez-le par téléphone si disponible.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Le devis affiché semble incorrect.</div>
+        <div class="faq-a">Les prix sont calculés selon le barème NeoTravel (distance, saison, urgence, nombre de passagers). Signalez l'erreur à votre responsable technique — ne modifiez pas le dossier directement.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Le client veut modifier sa demande après le devis.</div>
+        <div class="faq-a">Invitez-le à relancer une nouvelle conversation depuis la page d'accueil, ou créez un nouveau dossier manuellement si vous avez les droits administrateur.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Un dossier est bloqué depuis plus de 10 jours sans mise à jour.</div>
+        <div class="faq-a">Signalez-le à votre responsable — il peut s'agir d'un problème technique.</div>
+      </div>
+    </div>
+
+    <!-- Contacts -->
+    <div class="section">
+      <div class="section-title">
+        <div class="section-number" style="background:#6b7280;">?</div>
+        <h2>Contacts en cas de problème technique</h2>
+      </div>
+
+      <div class="contacts-grid">
+        <div class="contact-card">
+          <div class="contact-avatar">B</div>
+          <div>
+            <div class="contact-name">Béni</div>
+            <div class="contact-role">Tableau de bord / base de données</div>
+          </div>
+        </div>
+        <div class="contact-card">
+          <div class="contact-avatar">P</div>
+          <div>
+            <div class="contact-name">Paul</div>
+            <div class="contact-role">Interface / assistant chat</div>
+          </div>
+        </div>
+        <div class="contact-card">
+          <div class="contact-avatar">G</div>
+          <div>
+            <div class="contact-name">Giovanni</div>
+            <div class="contact-role">Calcul des devis</div>
+          </div>
+        </div>
+        <div class="contact-card">
+          <div class="contact-avatar">S</div>
+          <div>
+            <div class="contact-name">Sarah</div>
+            <div class="contact-role">Design / génération PDF</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Pied de page -->
+  <div class="footer">
+    <span>NeoTravel — Usage interne uniquement</span>
+    <span>EPITECH MBA1 · Promotion 2026</span>
+  </div>
+
+</div>
+</body>
+</html>
