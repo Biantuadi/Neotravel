@@ -195,7 +195,17 @@ export const tools = (demandeRef: { current: string | undefined }) => ({
         client_id = created?.id ?? null
       }
 
-      // 2. Créer la demande liée au client
+      // 2. Calculer l'urgence depuis date_depart
+      let urgence: 'faible' | 'normale' | 'urgente' = 'normale'
+      if (params.date_depart) {
+        const jours = Math.floor(
+          (new Date(params.date_depart).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+        )
+        if (jours < 7)   urgence = 'urgente'
+        else if (jours >= 90) urgence = 'faible'
+      }
+
+      // 3. Créer la demande liée au client
       const { data, error } = await supabaseAdmin
         .from('demandes')
         .insert({
@@ -211,6 +221,7 @@ export const tools = (demandeRef: { current: string | undefined }) => ({
           client_id,
           statut: 'nouveau_lead',
           score_completude: score,
+          urgence,
         })
         .select('id')
         .single()
