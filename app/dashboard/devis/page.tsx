@@ -64,8 +64,8 @@ async function getDevisData() {
     // Liste pour la table avec join demande
     supabaseAdmin.from('devis')
       .select(`
-        id, prix_ttc, envoye_le, statut, pdf_url, created_at,
-        demandes:demande_id ( nom_prospect, depart, destination )
+        id, prix_ttc, envoye_le, statut, pdf_url, created_at, demande_id,
+        demandes ( nom_prospect, depart, destination )
       `)
       .order('created_at', { ascending: false })
       .limit(200),
