@@ -84,40 +84,7 @@ export default async function DashboardPage() {
   const pipelineMax = Math.max(d.devisEnvoyes, 1)
 
   return (
-    <div className="flex min-h-screen bg-[#f5f7fa]">
-
-      {/* Sidebar masquée sur mobile */}
-      <aside className="hidden lg:flex w-[200px] shrink-0 bg-[#1a1a1a] min-h-screen flex-col pt-6">
-        <div className="flex items-center gap-3 px-6 mb-8">
-          <span className="w-6 h-6 rounded-full bg-[#4caf50] flex items-center justify-center shrink-0">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#a5d6a7]" />
-          </span>
-          <span className="text-white font-bold text-[15px]">Neotravel</span>
-        </div>
-        <p className="text-[9px] font-medium text-white px-6 mb-3 tracking-widest">PILOTAGE</p>
-        <div className="mx-3 bg-[rgba(76,175,80,0.15)] rounded-[10px] flex items-center h-10 mb-1 relative overflow-hidden">
-          <div className="absolute left-0 top-2 bottom-2 w-1 bg-[#4caf50] rounded-r" />
-          <span className="pl-5 text-white text-[13px] font-bold">Tableau de bord</span>
-        </div>
-        {['Demandes', 'Devis', 'Relances', 'Clients'].map(item => (
-          <a key={item} href="#"
-            className="px-7 py-3 text-white text-[13px] hover:bg-white/5 transition-colors">
-            {item}
-          </a>
-        ))}
-      </aside>
-
-      {/* Main */}
-      <main className="flex-1 min-w-0 px-4 sm:px-6 lg:px-10 py-6 lg:py-9">
-
-        {/* Logo mobile */}
-        <div className="flex items-center gap-3 mb-3 lg:hidden">
-          <span className="w-6 h-6 rounded-full bg-[#4caf50] flex items-center justify-center shrink-0">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#a5d6a7]" />
-          </span>
-          <span className="text-[#14141a] font-bold text-[15px]">Neotravel</span>
-        </div>
-
+    <>
         <h1 className="text-2xl lg:text-[26px] font-extrabold text-[#14141a]">Tableau de bord commercial</h1>
         <p className="text-[13px] text-[#707a8c] mt-1 mb-6">Vue direction — mise à jour en temps réel</p>
 
@@ -273,8 +240,6 @@ export default async function DashboardPage() {
             )}
           </div>
         </div>
-
-      </main>
-    </div>
+    </>
   )
 }
