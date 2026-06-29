@@ -35,26 +35,56 @@ export interface Demande {
   updated_at: string
 }
 
-export interface ParamsDevis {
-  nb_passagers: number
-  date_depart: string       // ISO date
-  date_demande: string      // ISO date
-  distance_km: number
-  options: OptionDevis[]
-}
+// Types de pricing — source de vérité dans lib/calculer-devis.ts
+import type { LigneDevis } from '@/lib/calculer-devis'
+export type { ParamsDevis, LigneDevis, Devis } from '@/lib/calculer-devis'
 
-export type OptionDevis = 'guide' | 'nuit_chauffeur' | 'peages'
+// ─── Tables Supabase ─────────────────────────────────────────────────────────
 
-export interface LigneDevis {
-  libelle: string
-  montant: number
-}
-
-export interface ResultatDevis {
+export interface DevisDB {
+  id: string
+  created_at: string
+  demande_id: string
   prix_ht: number
   tva: number
   prix_ttc: number
-  lignes: LigneDevis[]
-  coefficients: Record<string, number>
   devise: 'EUR'
+  lignes: LigneDevis[]
+  pdf_url?: string
+  envoye_le?: string
 }
+
+export interface Relance {
+  id: string
+  created_at: string
+  demande_id: string
+  type: 'relance_1' | 'relance_2'
+  envoyee_le?: string
+  statut: StatutRelance
+}
+
+export interface Log {
+  id: string
+  created_at: string
+  demande_id?: string
+  action: string
+  outil_utilise?: string
+  erreur?: string
+}
+
+export interface Client {
+  id: string
+  created_at: string
+  nom: string
+  email?: string
+  telephone?: string
+  type_client?: TypeClient
+  nb_demandes: number
+  derniere_demande?: string
+}
+
+// ─── Réponses API ─────────────────────────────────────────────────────────────
+
+export type ApiResponse<T> =
+  | { success: true; data: T }
+  | { success: false; error: string }

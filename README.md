@@ -1,4 +1,4 @@
-# NeoTravel
+# NeoTravel — Automatisation des processus commerciaux
 
 NeoTravel est une application Next.js qui qualifie des demandes de transport de groupe, calcule un devis, genere un PDF et peut l'envoyer au prospect par email via Resend. Les donnees metier sont stockees dans Supabase.
 

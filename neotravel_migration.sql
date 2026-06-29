@@ -41,6 +41,8 @@ create table clients (
   email               text,
   telephone           text,
   type_client         type_client not null default 'particulier',
+  nb_demandes         integer not null default 0,
+  derniere_demande    timestamptz,
   date_consentement   timestamptz,
   canal_acquisition   text,
   created_at          timestamptz not null default now(),
@@ -98,11 +100,13 @@ create table matrices (
 create table devis (
   id                uuid primary key default uuid_generate_v4(),
   demande_id        uuid not null references demandes(id) on delete cascade,
-  montant_ht        numeric(10,2) not null,
-  montant_ttc       numeric(10,2) not null,
-  lignes_detail     jsonb default '[]',
-  date_generation   timestamptz not null default now(),
-  date_envoi        timestamptz,
+  prix_ht           numeric(10,2) not null,
+  tva               numeric(10,2) not null,
+  prix_ttc          numeric(10,2) not null,
+  devise            text not null default 'EUR',
+  lignes            jsonb default '[]',
+  created_at        timestamptz not null default now(),
+  envoye_le         timestamptz,
   statut            statut_devis not null default 'brouillon',
   pdf_url           text,
   valide_par_humain boolean not null default false,
@@ -116,9 +120,9 @@ create table devis (
 create table relances (
   id                uuid primary key default uuid_generate_v4(),
   demande_id        uuid not null references demandes(id) on delete cascade,
-  ordre_relance     integer not null check (ordre_relance in (1, 2)),
+  type              text not null check (type in ('relance_1', 'relance_2')),
   date_programmee   timestamptz not null,
-  date_envoyee      timestamptz,
+  envoyee_le        timestamptz,
   canal             canal_relance not null default 'email',
   template          text,
   statut            statut_relance not null default 'programmee',
@@ -138,7 +142,7 @@ create table logs (
   tokens_out    integer default 0,
   cout_eur      numeric(10,6) default 0,
   erreur        text,
-  timestamp     timestamptz not null default now()
+  created_at    timestamptz not null default now()
 );
 
 -- ============================================================
@@ -151,7 +155,7 @@ create index idx_devis_demande_id      on devis(demande_id);
 create index idx_relances_demande_id   on relances(demande_id);
 create index idx_relances_programmee   on relances(date_programmee) where statut = 'programmee';
 create index idx_logs_demande_id       on logs(demande_id);
-create index idx_logs_timestamp        on logs(timestamp);
+create index idx_logs_created_at       on logs(created_at);
 
 -- ============================================================
 -- Row Level Security (RLS) - à activer pour la prod
