@@ -1,41 +1,68 @@
 import { supabaseAdmin } from '@/lib/supabase'
 
-export interface DashboardData {
-  // KPIs
-  leadsAujourdhui: number
-  tauxConversion: number        // %
-  relancesAttente: number
+export interface RecentDemande {
+  id: string
+  nom_prospect: string
+  depart: string | null
+  destination: string | null
+  statut: string
+  urgence: string
+  date_creation: string
+}
 
-  // Pipeline devis
+export interface DayData {
+  jour: string
+  leads: number
+  devis: number
+}
+
+export interface DashboardData {
+  leadsAujourdhui: number
+  tauxConversion: number
+  relancesAttente: number
+  totalDemandes: number
+
   devisEnvoyes: number
   devisAcceptes: number
   devisRefuses: number
+  devisEnCours: number
 
-  // Demandes urgentes
-  urgentesTraitees: number      // %
-  urgentesEnAttente: number     // %
-  urgentesParJour: number       // moyenne
+  statutCounts: Record<string, number>
 
-  // Automatisation
-  tauxAutomatisation: number    // %
-  tauxHumain: number            // %
-  tauxHitlHauteValeur: number   // %
-  dossiersEnAttenteCommercial: number
+  urgentesTotal: number
+  urgentesTraitees: number
 
-  // Relances indicateurs
+  tauxAutomatisation: number
+  dossiersEscalades: number
+
   relancesEnvoyees: number
   relancesEnRetard: number
   relancesReponses: number
-  tauxReponseRelances: number   // %
+  tauxReponseRelances: number
 
-  // Temps gagné (valeurs fixes issues du Figma)
-  tempsSemaine: { label: string; heures: number; max: number }[]
+  semaine: DayData[]
+
+  caPotentielHT: number
+  caAccepteHT: number
+
+  recentDemandes: RecentDemande[]
 }
+
+const STATUTS = [
+  'nouveau_lead', 'incomplet', 'qualifie', 'devis_envoye',
+  'relance_1', 'relance_2', 'accepte', 'refuse', 'cas_complexe', 'cloture',
+]
+
+const DAYS_FR = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
 
 export async function getDashboardData(): Promise<DashboardData> {
   const now = new Date()
   const startOfDay = new Date(now)
   startOfDay.setHours(0, 0, 0, 0)
+
+  const day7ago = new Date(now)
+  day7ago.setDate(day7ago.getDate() - 6)
+  day7ago.setHours(0, 0, 0, 0)
 
   const [
     { count: leadsAujourdhui },
@@ -50,118 +77,127 @@ export async function getDashboardData(): Promise<DashboardData> {
     { count: relancesEnvoyees },
     { count: relancesEnRetard },
     { count: relancesReponses },
-    { count: haute_valeur },
+    { data: statutRows },
+    { data: recentRows },
+    { data: semaineLeads },
+    { data: semaineDevis },
+    { data: devisCA },
   ] = await Promise.all([
-    // Leads aujourd'hui
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .gte('date_creation', startOfDay.toISOString()),
-
-    // Total demandes
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true }),
-
-    // Acceptées
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .eq('statut', 'accepte'),
-
-    // Devis envoyés (tous statuts après envoi)
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .in('statut', ['devis_envoye', 'relance_1', 'relance_2', 'accepte', 'refuse']),
-
-    // Devis refusés
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .eq('statut', 'refuse'),
-
-    // Demandes urgentes total
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .eq('urgence', 'urgente'),
-
-    // Urgentes traitées (accepte ou refuse ou cloture)
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .eq('urgence', 'urgente')
       .in('statut', ['accepte', 'refuse', 'cloture', 'devis_envoye']),
-
-    // Cas complexes (escalade humain)
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .eq('statut', 'cas_complexe'),
-
-    // Relances en attente (programmée)
     supabaseAdmin.from('relances').select('*', { count: 'exact', head: true })
       .eq('statut', 'programmee'),
-
-    // Relances envoyées
     supabaseAdmin.from('relances').select('*', { count: 'exact', head: true })
       .eq('statut', 'envoyee'),
-
-    // Relances en retard (programmée mais date passée)
     supabaseAdmin.from('relances').select('*', { count: 'exact', head: true })
       .eq('statut', 'programmee')
       .lt('date_programmee', now.toISOString()),
-
-    // Relances avec réponse (demande acceptée ou refusée après relance)
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
-      .in('statut', ['relance_1', 'relance_2', 'accepte', 'refuse'])
-      .not('statut', 'eq', 'devis_envoye'),
-
-    // Haute valeur : devis > 5000 € validés par humain
-    supabaseAdmin.from('devis').select('*', { count: 'exact', head: true })
-      .eq('valide_par_humain', true)
-      .gte('prix_ttc', 5000),
+      .in('statut', ['relance_1', 'relance_2', 'accepte', 'refuse']),
+    supabaseAdmin.from('demandes').select('statut'),
+    supabaseAdmin.from('demandes')
+      .select('id, nom_prospect, depart, destination, statut, urgence, date_creation')
+      .order('date_creation', { ascending: false })
+      .limit(5),
+    supabaseAdmin.from('demandes')
+      .select('date_creation')
+      .gte('date_creation', day7ago.toISOString()),
+    supabaseAdmin.from('demandes')
+      .select('date_creation')
+      .in('statut', ['devis_envoye', 'relance_1', 'relance_2', 'accepte', 'refuse'])
+      .gte('date_creation', day7ago.toISOString()),
+    supabaseAdmin.from('devis').select('prix_ht, statut'),
   ])
 
   const total = totalDemandes ?? 0
-  const acc = acceptees ?? 0
-  const env = devisEnvoyes ?? 0
-  const ref = devisRefuses ?? 0
-  const urg = urgentesTotal ?? 0
-  const urgTrait = urgentesTraiteesCount ?? 0
-  const cas = casComplexes ?? 0
+  const acc   = acceptees ?? 0
+  const env   = devisEnvoyes ?? 0
+  const ref   = devisRefuses ?? 0
+  const urg   = urgentesTotal ?? 0
+  const urgT  = urgentesTraiteesCount ?? 0
+  const cas   = casComplexes ?? 0
   const relAtt = relancesAttenteCount ?? 0
   const relEnv = relancesEnvoyees ?? 0
   const relRet = relancesEnRetard ?? 0
   const relRep = relancesReponses ?? 0
-  const hv = haute_valeur ?? 0
 
   const tauxConversion = total > 0 ? Math.round((acc / total) * 100) : 0
-  const pctUrgTraitees = urg > 0 ? Math.round((urgTrait / urg) * 100) : 0
-  const pctUrgAttente = 100 - pctUrgTraitees
+  const pctUrgTraitees = urg > 0 ? Math.round((urgT / urg) * 100) : 0
+  const tauxAuto       = total > 0 ? Math.round(((total - cas) / total) * 100) : 0
+  const totalRelances  = relEnv + relAtt
+  const tauxRep        = totalRelances > 0 ? Math.round((relRep / totalRelances) * 100) : 0
+  const devisEnCours   = Math.max(0, env - acc - ref)
 
-  // Taux automatisation : cas non escaladés / total
-  const tauxAuto = total > 0 ? Math.round(((total - cas) / total) * 100) : 0
-  const tauxHumain = 100 - tauxAuto
+  const statutCounts: Record<string, number> = Object.fromEntries(STATUTS.map(s => [s, 0]))
+  for (const row of (statutRows ?? [])) {
+    if (row.statut in statutCounts) statutCounts[row.statut]++
+  }
 
-  // HITL haute valeur en % du total
-  const tauxHitl = total > 0 ? Math.round((hv / total) * 100) : 0
+  const leadsParJour: Record<string, number> = {}
+  const devisParJour: Record<string, number> = {}
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(day7ago)
+    d.setDate(d.getDate() + i)
+    const key = d.toISOString().slice(0, 10)
+    leadsParJour[key] = 0
+    devisParJour[key] = 0
+  }
+  for (const r of (semaineLeads ?? [])) {
+    const k = (r.date_creation as string).slice(0, 10)
+    if (k in leadsParJour) leadsParJour[k]++
+  }
+  for (const r of (semaineDevis ?? [])) {
+    const k = (r.date_creation as string).slice(0, 10)
+    if (k in devisParJour) devisParJour[k]++
+  }
+  const semaine: DayData[] = Object.keys(leadsParJour).map(key => ({
+    jour: DAYS_FR[new Date(key + 'T12:00:00').getDay()],
+    leads: leadsParJour[key],
+    devis: devisParJour[key],
+  }))
 
-  // Taux de réponse aux relances
-  const totalRelances = relEnv + relAtt
-  const tauxRep = totalRelances > 0 ? Math.round((relRep / totalRelances) * 100) : 0
-
-  // Urgences par jour : total urgentes / 7 (semaine glissante approximative)
-  const urgParJour = Math.max(1, Math.round(urg / 7))
+  let caPotentielHT = 0
+  let caAccepteHT = 0
+  for (const d of (devisCA ?? [])) {
+    if (d.statut !== 'refuse') caPotentielHT += d.prix_ht ?? 0
+    if (d.statut === 'accepte') caAccepteHT += d.prix_ht ?? 0
+  }
 
   return {
-    leadsAujourdhui: leadsAujourdhui ?? 0,
+    leadsAujourdhui:    leadsAujourdhui ?? 0,
     tauxConversion,
-    relancesAttente: relAtt,
-    devisEnvoyes: env,
-    devisAcceptes: acc,
-    devisRefuses: ref,
-    urgentesTraitees: pctUrgTraitees,
-    urgentesEnAttente: pctUrgAttente,
-    urgentesParJour: urgParJour,
+    relancesAttente:    relAtt,
+    totalDemandes:      total,
+    devisEnvoyes:       env,
+    devisAcceptes:      acc,
+    devisRefuses:       ref,
+    devisEnCours,
+    statutCounts,
+    urgentesTotal:      urg,
+    urgentesTraitees:   pctUrgTraitees,
     tauxAutomatisation: tauxAuto,
-    tauxHumain,
-    tauxHitlHauteValeur: tauxHitl,
-    dossiersEnAttenteCommercial: cas,
-    relancesEnvoyees: relEnv,
-    relancesEnRetard: relRet,
-    relancesReponses: relRep,
+    dossiersEscalades:  cas,
+    relancesEnvoyees:   relEnv,
+    relancesEnRetard:   relRet,
+    relancesReponses:   relRep,
     tauxReponseRelances: tauxRep,
-    tempsSemaine: [
-      { label: 'Qualification leads', heures: 12, max: 12 },
-      { label: 'Rédaction devis',     heures: 8,  max: 12 },
-      { label: 'Relances manuelles',  heures: 6,  max: 12 },
-      { label: 'Suivi pipeline',      heures: 4,  max: 12 },
-    ],
+    semaine,
+    caPotentielHT:      Math.round(caPotentielHT),
+    caAccepteHT:        Math.round(caAccepteHT),
+    recentDemandes:     (recentRows ?? []) as RecentDemande[],
   }
 }

@@ -1,78 +1,63 @@
 import type { Metadata } from 'next'
 import { getDashboardData } from '@/lib/dashboard-data'
+import { ActivityChart, StatutsDonut, PipelineBar, GaugeRing } from '@/components/dashboard/Charts'
 
 export const metadata: Metadata = { title: 'NeoTravel — Tableau de bord' }
-export const revalidate = 60 // rafraîchit toutes les 60s
+export const revalidate = 60
 
-// ── Composants UI ────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────
 
-function KpiCard({ label, value, note, noteColor }: {
-  label: string; value: string; note: string; noteColor: string
+const STATUT_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  nouveau_lead:  { label: 'Nouveau',       color: '#707a8c', bg: 'bg-[rgba(112,122,140,0.1)]' },
+  incomplet:     { label: 'Incomplet',     color: '#f29c12', bg: 'bg-[rgba(242,156,18,0.1)]'  },
+  qualifie:      { label: 'Qualifié',      color: '#336bc7', bg: 'bg-[rgba(51,107,199,0.1)]'  },
+  devis_envoye:  { label: 'Devis envoyé',  color: '#7c3aed', bg: 'bg-[rgba(124,58,237,0.1)]' },
+  relance_1:     { label: 'Relance 1',     color: '#f29c12', bg: 'bg-[rgba(242,156,18,0.1)]'  },
+  relance_2:     { label: 'Relance 2',     color: '#ed6a1a', bg: 'bg-[rgba(237,106,26,0.1)]'  },
+  accepte:       { label: 'Accepté',       color: '#21a666', bg: 'bg-[rgba(33,166,102,0.1)]'  },
+  refuse:        { label: 'Refusé',        color: '#e53935', bg: 'bg-[rgba(229,57,53,0.1)]'   },
+  cas_complexe:  { label: 'Cas complexe',  color: '#e53935', bg: 'bg-[rgba(229,57,53,0.1)]'   },
+  cloture:       { label: 'Clôturé',       color: '#9ca3af', bg: 'bg-[rgba(156,163,175,0.1)]' },
+}
+
+const URGENCE: Record<string, string> = {
+  faible: 'bg-[#9ca3af]', normale: 'bg-[#f29c12]', urgente: 'bg-[#e53935]',
+}
+
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+function fmtEur(n: number) {
+  if (n === 0) return '0 €'
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace('.', ',')} k€`
+  return `${n} €`
+}
+
+// ── Composants ───────────────────────────────────────────
+
+function KpiCard({ label, value, sub, subColor = '#9ca3af', accent }: {
+  label: string; value: string; sub: string; subColor?: string; accent?: string
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.09)] px-5 py-4 flex flex-col gap-1">
-      <p className="text-[11px] text-[#707a8c]">{label}</p>
-      <p className="text-4xl font-extrabold text-[#14141a] leading-none py-1">{value}</p>
-      <p className={`text-[11px] font-medium ${noteColor}`}>{note}</p>
+    <div className="bg-white rounded-2xl border border-[#e8eaed] px-5 py-4 flex flex-col gap-1" style={accent ? { borderTop: `3px solid ${accent}` } : {}}>
+      <p className="text-[11px] text-[#9ca3af] font-medium uppercase tracking-widest">{label}</p>
+      <p className="text-[30px] font-extrabold text-[#12151a] leading-none mt-0.5">{value}</p>
+      <p className="text-[11px] font-medium mt-0.5" style={{ color: subColor }}>{sub}</p>
     </div>
   )
 }
 
-function BarRow({ label, pct, value, valueColor, barColor = '#4caf50' }: {
-  label: string; pct: number; value: string; valueColor: string; barColor?: string
-}) {
-  return (
-    <div className="mb-4 last:mb-0">
-      <p className="text-[11px] text-[#707a8c] mb-1">{label}</p>
-      <div className="flex items-center gap-3">
-        <div className="flex-1 min-w-0 h-[14px] bg-[#e0e2e6] rounded-full overflow-hidden">
-          <div className="h-full rounded-full" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: barColor }} />
-        </div>
-        <span className={`text-[12px] font-bold whitespace-nowrap ${valueColor}`}>{value}</span>
-      </div>
-    </div>
-  )
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <p className="text-[14px] font-bold text-[#12151a] mb-4">{children}</p>
 }
 
-function DonutChart({ pct, color, label = '' }: { pct: number; color: string; label?: string }) {
-  const r = 44
-  const circ = 2 * Math.PI * r
-  const dash = (pct / 100) * circ
+function Badge({ statut }: { statut: string }) {
+  const cfg = STATUT_LABELS[statut] ?? { label: statut, color: '#707a8c', bg: 'bg-[rgba(112,122,140,0.1)]' }
   return (
-    <div className="relative w-[116px] h-[116px] shrink-0">
-      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-        <circle cx="50" cy="50" r={r} fill="none" stroke="#e0e2e6" strokeWidth="12" />
-        <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="12"
-          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[17px] font-bold" style={{ color }}>{pct}%</span>
-        {label && <span className="text-[9px] text-[#707a8c]">{label}</span>}
-      </div>
-    </div>
-  )
-}
-
-function StatBox({ value, valueColor, label, topColor }: {
-  value: string; valueColor: string; label: string; topColor: string
-}) {
-  return (
-    <div className="bg-[#f5f7fa] rounded-xl overflow-hidden flex-1 min-w-0">
-      <div className="h-1 w-full" style={{ backgroundColor: topColor }} />
-      <div className="px-3 py-3">
-        <p className="text-[28px] font-extrabold leading-none mb-1" style={{ color: valueColor }}>{value}</p>
-        <p className="text-[10px] text-[#707a8c]">{label}</p>
-      </div>
-    </div>
-  )
-}
-
-function Legend({ color, label, bold = false }: { color: string; label: string; bold?: boolean }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-      <span className={`text-[11px] ${bold ? 'font-medium text-[#14141a]' : 'text-[#707a8c]'}`}>{label}</span>
-    </div>
+    <span className={`inline-flex items-center px-2.5 h-[22px] rounded-full text-[11px] font-semibold ${cfg.bg}`} style={{ color: cfg.color }}>
+      {cfg.label}
+    </span>
   )
 }
 
@@ -81,165 +66,215 @@ function Legend({ color, label, bold = false }: { color: string; label: string; 
 export default async function DashboardPage() {
   const d = await getDashboardData()
 
-  const pipelineMax = Math.max(d.devisEnvoyes, 1)
-
   return (
-    <>
-        <h1 className="text-2xl lg:text-[26px] font-extrabold text-[#14141a]">Tableau de bord commercial</h1>
-        <p className="text-[13px] text-[#707a8c] mt-1 mb-6">Vue direction — mise à jour en temps réel</p>
+    <div className="space-y-5 pb-12">
 
-        {/* KPIs : 2 cols mobile → 4 cols desktop */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <KpiCard
-            label="Leads reçus / jour"
-            value={String(d.leadsAujourdhui)}
-            note={d.leadsAujourdhui > 0 ? "aujourd'hui" : 'aucun aujourd\'hui'}
-            noteColor="text-[#21a666]"
-          />
-          <KpiCard
-            label="Taux de conversion"
-            value={`${d.tauxConversion}%`}
-            note={d.tauxConversion >= 25 ? '+5 pts' : 'à améliorer'}
-            noteColor={d.tauxConversion >= 25 ? 'text-[#21a666]' : 'text-[#ed8f1a]'}
-          />
-          <KpiCard
-            label="Devis envoyés"
-            value={String(d.devisEnvoyes)}
-            note={`${d.devisAcceptes} acceptés`}
-            noteColor="text-[#21a666]"
-          />
-          <KpiCard
-            label="Relances en attente"
-            value={String(d.relancesAttente)}
-            note={d.relancesAttente > 0 ? 'à traiter' : 'à jour'}
-            noteColor={d.relancesAttente > 5 ? 'text-[#f29c12]' : 'text-[#21a666]'}
-          />
+      {/* ── Header ── */}
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-[22px] lg:text-[26px] font-extrabold text-[#12151a]">Tableau de bord</h1>
+          <p className="text-[13px] text-[#9ca3af] mt-0.5">Vue commerciale · données en temps réel</p>
+        </div>
+        {d.totalDemandes === 0 && (
+          <span className="hidden sm:block text-[11px] bg-[#fff8e1] text-[#f29c12] font-medium px-3 py-1.5 rounded-full border border-[#fde68a]">
+            En attente de données
+          </span>
+        )}
+      </div>
+
+      {/* ── KPIs ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <KpiCard
+          label="Leads aujourd'hui"
+          value={String(d.leadsAujourdhui)}
+          sub={`${d.totalDemandes} au total`}
+          accent="#4caf50"
+          subColor="#9ca3af"
+        />
+        <KpiCard
+          label="Taux de conversion"
+          value={`${d.tauxConversion}%`}
+          sub={d.devisAcceptes > 0 ? `${d.devisAcceptes} accepté${d.devisAcceptes > 1 ? 's' : ''}` : 'aucun accepté'}
+          accent="#336bc7"
+          subColor={d.devisAcceptes > 0 ? '#21a666' : '#9ca3af'}
+        />
+        <KpiCard
+          label="CA potentiel HT"
+          value={fmtEur(d.caPotentielHT)}
+          sub={d.caAccepteHT > 0 ? `${fmtEur(d.caAccepteHT)} confirmé` : 'aucun confirmé'}
+          accent="#7c3aed"
+          subColor={d.caAccepteHT > 0 ? '#21a666' : '#9ca3af'}
+        />
+        <KpiCard
+          label="Relances en attente"
+          value={String(d.relancesAttente)}
+          sub={d.relancesEnRetard > 0 ? `${d.relancesEnRetard} en retard` : 'à jour'}
+          accent={d.relancesEnRetard > 0 ? '#e53935' : '#4caf50'}
+          subColor={d.relancesEnRetard > 0 ? '#e53935' : '#21a666'}
+        />
+      </div>
+
+      {/* ── Activité semaine + Pipeline ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+
+        {/* Activité 7 jours */}
+        <div className="bg-white rounded-2xl border border-[#e8eaed] p-5">
+          <div className="flex items-center justify-between mb-4">
+            <SectionTitle>Activité — 7 derniers jours</SectionTitle>
+            <div className="flex items-center gap-3 text-[11px] text-[#9ca3af]">
+              <span className="flex items-center gap-1"><span className="w-2.5 h-0.5 bg-[#4caf50] inline-block rounded" /> Leads</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-0.5 bg-[#336bc7] inline-block rounded" /> Devis</span>
+            </div>
+          </div>
+          <ActivityChart data={d.semaine} />
         </div>
 
-        {/* Pipeline + Demandes urgentes */}
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_480px] gap-4 mb-4">
-
-          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-6">
-            <p className="text-[16px] font-bold text-[#14141a] mb-5">Pipeline des devis</p>
-            <BarRow label="Envoyés"  pct={100} value={String(d.devisEnvoyes)} barColor="#336bc7" valueColor="text-[#174f9e]" />
-            <BarRow label="Acceptés" pct={pipelineMax > 0 ? (d.devisAcceptes / pipelineMax) * 100 : 0} value={String(d.devisAcceptes)} barColor="#4caf50" valueColor="text-[#17995c]" />
-            <BarRow label="Refusés"  pct={pipelineMax > 0 ? (d.devisRefuses / pipelineMax) * 100 : 0} value={String(d.devisRefuses)} barColor="#e53935" valueColor="text-[#d11a2e]" />
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-6">
-            <p className="text-[14px] font-bold text-[#122147] mb-4">Demandes urgentes</p>
-            <div className="flex gap-4 items-start">
-              <div className="flex-1 min-w-0 space-y-2">
-                <Legend color="#4caf50" label={`Traitées avant J+2 : ${d.urgentesTraitees}%`} bold />
-                <Legend color="#f29c12" label={`En attente : ${d.urgentesEnAttente}%`} />
-                <Legend color="#e0e2e6" label={`Volume : ~${d.urgentesParJour} urgence${d.urgentesParJour > 1 ? 's' : ''} / jour`} />
-                <p className="text-[11px] font-medium text-[#f29c12] pt-4">
-                  {d.urgentesEnAttente}% des urgences encore en attente de traitement
-                </p>
+        {/* Pipeline */}
+        <div className="bg-white rounded-2xl border border-[#e8eaed] p-5">
+          <SectionTitle>Pipeline des devis</SectionTitle>
+          <PipelineBar data={{
+            devisEnvoyes:  d.devisEnvoyes,
+            devisAcceptes: d.devisAcceptes,
+            devisRefuses:  d.devisRefuses,
+            devisEnCours:  d.devisEnCours,
+          }} />
+          <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-[#f1f3f6]">
+            {[
+              { label: 'Acceptés', v: d.devisAcceptes, color: '#21a666' },
+              { label: 'En cours', v: d.devisEnCours,   color: '#f29c12' },
+              { label: 'Refusés',  v: d.devisRefuses,   color: '#e53935' },
+            ].map(({ label, v, color }) => (
+              <div key={label} className="text-center">
+                <p className="text-[20px] font-extrabold leading-none" style={{ color }}>{v}</p>
+                <p className="text-[10px] text-[#9ca3af] mt-0.5">{label}</p>
               </div>
-              <DonutChart pct={d.urgentesTraitees} color="#4caf50" />
-            </div>
+            ))}
           </div>
         </div>
+      </div>
 
-        {/* 3 donuts */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      {/* ── Statuts + Performances + Relances ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-5">
-            <p className="text-[13px] font-bold text-[#122147] mb-4">Devis complétés sans relance</p>
-            <div className="flex gap-3 items-start">
-              <div className="flex-1 min-w-0 space-y-2">
-                <Legend color="#4caf50" label={`Acceptés direct : ${Math.min(d.tauxAutomatisation, 100)}%`} bold />
-                <Legend color="#f29c12" label={`Après relance : ${100 - Math.min(d.tauxAutomatisation, 100)}%`} />
-                <p className="text-[11px] font-medium text-[#17995c] pt-4">
-                  ↑ taux auto. : {d.tauxAutomatisation}%
-                </p>
-              </div>
-              <DonutChart pct={Math.min(d.tauxAutomatisation, 100)} color="#4caf50" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-5">
-            <p className="text-[13px] font-bold text-[#122147] mb-4">{"Taux d'automatisation des dossiers"}</p>
-            <div className="flex gap-3 items-start">
-              <div className="flex-1 min-w-0 space-y-2">
-                <Legend color="#4caf50" label={`Traités par l'agent IA : ${d.tauxAutomatisation}%`} bold />
-                <Legend color="#e0e2e6" label={`Reprise humaine : ${d.tauxHumain}%`} />
-                <p className="text-[11px] font-medium text-[#ed8f1a] pt-4">Objectif phase 3 : {`>`} 80%</p>
-              </div>
-              <DonutChart pct={d.tauxAutomatisation} color="#4caf50" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-5">
-            <p className="text-[13px] font-bold text-[#122147] mb-4">{"Détail de l'intervention humaine"}</p>
-            <div className="flex gap-3 items-start">
-              <div className="flex-1 min-w-0 space-y-2 mt-4">
-                <Legend color="#e53935" label={`HITL haute valeur (> 5 000 €) : ${d.tauxHitlHauteValeur}%`} />
-                <p className="text-[11px] font-medium text-[#d11a2e] pt-4">
-                  {d.dossiersEnAttenteCommercial} dossier{d.dossiersEnAttenteCommercial !== 1 ? 's' : ''} en attente commercial
-                </p>
-              </div>
-              <div className="relative w-[116px] h-[116px] shrink-0">
-                <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                  <circle cx="50" cy="50" r="44" fill="none" stroke="#e0e2e6" strokeWidth="12" />
-                  <circle cx="50" cy="50" r="44" fill="none" stroke="#f29c12" strokeWidth="12"
-                    strokeDasharray={`${(d.tauxHumain / 100) * 2 * Math.PI * 44} ${2 * Math.PI * 44}`}
-                    strokeLinecap="round" />
-                  {d.tauxHitlHauteValeur > 0 && (
-                    <circle cx="50" cy="50" r="44" fill="none" stroke="#e53935" strokeWidth="12"
-                      strokeDasharray={`${(d.tauxHitlHauteValeur / 100) * 2 * Math.PI * 44} ${2 * Math.PI * 44}`}
-                      strokeDashoffset={`-${(d.tauxHumain / 100) * 2 * Math.PI * 44}`}
-                      strokeLinecap="round" />
-                  )}
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[15px] font-bold text-[#f29c12]">{d.tauxHumain}%</span>
-                  <span className="text-[9px] text-[#707a8c]">humain</span>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* Donut statuts */}
+        <div className="bg-white rounded-2xl border border-[#e8eaed] p-5">
+          <SectionTitle>Répartition des dossiers</SectionTitle>
+          <StatutsDonut statutCounts={d.statutCounts} />
         </div>
 
-        {/* Temps gagné + Relances */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        {/* Jauges performances */}
+        <div className="bg-white rounded-2xl border border-[#e8eaed] p-5">
+          <SectionTitle>Performances</SectionTitle>
+          <div className="flex justify-around items-center py-2">
+            <GaugeRing
+              pct={d.tauxConversion}
+              color="#4caf50"
+              size={90}
+              label="Conversion"
+              sublabel="leads → accepté"
+            />
+            <GaugeRing
+              pct={d.tauxAutomatisation}
+              color="#336bc7"
+              size={90}
+              label="Automatisation"
+              sublabel="sans escalade"
+            />
+            <GaugeRing
+              pct={d.urgentesTraitees}
+              color="#f29c12"
+              size={90}
+              label="Urgences"
+              sublabel="traitées"
+            />
+          </div>
+          {d.dossiersEscalades > 0 && (
+            <div className="mt-4 pt-3 border-t border-[#f1f3f6] flex items-center justify-between">
+              <span className="text-[12px] text-[#9ca3af]">Escalades humain en cours</span>
+              <span className="text-[13px] font-bold text-[#e53935]">{d.dossiersEscalades}</span>
+            </div>
+          )}
+        </div>
 
-          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-6">
-            <p className="text-[14px] font-bold text-[#122147] mb-5">Temps gagné par les commerciaux / semaine</p>
-            {d.tempsSemaine.map(({ label, heures, max }, i) => {
-              const valueColors = ['text-[#174f9e]', 'text-[#174f9e]', 'text-[#17995c]', 'text-[#ed8f1a]']
-              return (
-                <BarRow key={label} label={label} pct={(heures / max) * 100}
-                  value={`${heures}h/sem`} barColor="#4caf50" valueColor={valueColors[i]} />
-              )
-            })}
-            <p className="text-[11px] font-medium text-[#17995c] mt-3">
-              Total : ~{d.tempsSemaine.reduce((s, t) => s + t.heures, 0)}h/semaine récupérées par les commerciaux
+        {/* Relances */}
+        <div className="bg-white rounded-2xl border border-[#e8eaed] p-5">
+          <SectionTitle>Relances</SectionTitle>
+          <div className="grid grid-cols-3 gap-2 mb-5">
+            {[
+              { v: d.relancesEnvoyees, label: 'Envoyées',  color: '#336bc7' },
+              { v: d.relancesEnRetard, label: 'En retard', color: '#e53935' },
+              { v: d.relancesReponses, label: 'Réponses',  color: '#21a666' },
+            ].map(({ v, label, color }) => (
+              <div key={label} className="bg-[#f5f7fa] rounded-xl py-3 text-center">
+                <p className="text-[24px] font-extrabold leading-none" style={{ color }}>{v}</p>
+                <p className="text-[10px] text-[#9ca3af] mt-1">{label}</p>
+              </div>
+            ))}
+          </div>
+          <div>
+            <div className="flex justify-between text-[12px] mb-1.5">
+              <span className="text-[#4b5563]">Taux de réponse</span>
+              <span className="font-bold text-[#12151a]">{d.tauxReponseRelances}%</span>
+            </div>
+            <div className="h-2 bg-[#f1f3f6] rounded-full overflow-hidden">
+              <div className="h-full rounded-full bg-[#21a666]" style={{ width: `${d.tauxReponseRelances}%` }} />
+            </div>
+          </div>
+          {d.relancesEnRetard > 0 && (
+            <p className="text-[11px] text-[#e53935] font-medium mt-3 pt-3 border-t border-[#f1f3f6]">
+              ⚠ {d.relancesEnRetard} relance{d.relancesEnRetard > 1 ? 's' : ''} dépassée{d.relancesEnRetard > 1 ? 's' : ''} — à traiter
             </p>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-6">
-            <p className="text-[14px] font-bold text-[#122147] mb-5">Relances — Indicateurs</p>
-            <div className="flex gap-3 mb-5">
-              <StatBox value={String(d.relancesEnvoyees)} valueColor="#174f9e" label="Envoyées"          topColor="#336bc7" />
-              <StatBox value={String(d.relancesEnRetard)} valueColor="#d11a2e" label="En retard"         topColor="#e53935" />
-              <StatBox value={String(d.relancesReponses)} valueColor="#17995c" label="Réponses obtenues" topColor="#4caf50" />
-            </div>
-            <p className="text-[12px] font-medium text-[#122147] mb-2">Taux de réponse aux relances</p>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="flex-1 min-w-0 h-3 bg-[#e0e2e6] rounded-full overflow-hidden">
-                <div className="h-full bg-[#f29c12] rounded-full" style={{ width: `${d.tauxReponseRelances}%` }} />
-              </div>
-              <span className="text-[11px] font-bold text-[#17995c] whitespace-nowrap">{d.tauxReponseRelances}%</span>
-            </div>
-            {d.relancesEnRetard > 0 && (
-              <p className="text-[11px] font-medium text-[#e53935] mt-4">
-                ⚠ {d.relancesEnRetard} relance{d.relancesEnRetard > 1 ? 's' : ''} en retard — action requise
-              </p>
-            )}
-          </div>
+          )}
         </div>
-    </>
+      </div>
+
+      {/* ── Dernières demandes ── */}
+      <div className="bg-white rounded-2xl border border-[#e8eaed] p-5">
+        <div className="flex items-center justify-between mb-4">
+          <SectionTitle>Dernières demandes</SectionTitle>
+          {d.totalDemandes > 5 && (
+            <a href="/dashboard/demandes" className="text-[12px] text-[#336bc7] hover:underline font-medium">
+              Voir tout ({d.totalDemandes}) →
+            </a>
+          )}
+        </div>
+        {d.recentDemandes.length === 0 ? (
+          <div className="flex items-center justify-center h-20 text-[13px] text-[#9ca3af]">
+            Aucune demande reçue pour l&apos;instant
+          </div>
+        ) : (
+          <div className="overflow-x-auto -mx-5 px-5">
+            <table className="w-full min-w-[500px]">
+              <thead>
+                <tr className="border-b border-[#f1f3f6]">
+                  {['Prospect', 'Trajet', 'Statut', 'Urgence', 'Date'].map(h => (
+                    <th key={h} className="text-left text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wider pb-2.5 pr-4 first:pl-0">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {d.recentDemandes.map((dem, i) => (
+                  <tr key={dem.id} className={`${i < d.recentDemandes.length - 1 ? 'border-b border-[#f9fafb]' : ''}`}>
+                    <td className="py-3 pr-4 text-[13px] font-semibold text-[#12151a] whitespace-nowrap">{dem.nom_prospect}</td>
+                    <td className="py-3 pr-4 text-[12px] text-[#4b5563] whitespace-nowrap">
+                      {dem.depart && dem.destination ? `${dem.depart} → ${dem.destination}` : dem.depart ?? dem.destination ?? '—'}
+                    </td>
+                    <td className="py-3 pr-4"><Badge statut={dem.statut} /></td>
+                    <td className="py-3 pr-4">
+                      <span className="flex items-center gap-1.5">
+                        <span className={`w-2 h-2 rounded-full ${URGENCE[dem.urgence] ?? 'bg-[#9ca3af]'}`} />
+                        <span className="text-[11px] text-[#9ca3af] capitalize">{dem.urgence ?? 'normale'}</span>
+                      </span>
+                    </td>
+                    <td className="py-3 text-[11px] text-[#9ca3af] whitespace-nowrap">{fmtDate(dem.date_creation)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+    </div>
   )
 }

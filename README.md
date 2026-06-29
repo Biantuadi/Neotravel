@@ -1,10 +1,10 @@
 # NeoTravel — Automatisation des processus commerciaux
 
-Projet scolaire EPITECH MBA1 — Juin 2026
+NeoTravel est une application Next.js qui qualifie des demandes de transport de groupe, calcule un devis, genere un PDF et peut l'envoyer au prospect par email via Resend. Les donnees metier sont stockees dans Supabase.
 
-NeoTravel est un intermédiaire de transport de groupe. Ce projet automatise son processus commercial : de la demande de devis initiale jusqu'à l'envoi du PDF et aux relances automatiques, en passant par un agent IA conversationnel.
+Le projet utilise Next.js App Router, TypeScript, Supabase, Vercel AI SDK, Anthropic, pdf-lib, Resend, Zod et Jest.
 
-## Architecture
+## Etat actuel
 
 ```
 Prospect (chat) → Agent IA (Vercel AI SDK) → calculer_devis() → PDF (pdf-lib) → Email (Resend)
@@ -12,15 +12,15 @@ Prospect (chat) → Agent IA (Vercel AI SDK) → calculer_devis() → PDF (pdf-l
                                            → Edge Functions Supabase (relances cron J+2/J+3/J+7)
 ```
 
-**Stack technique :**
-- **Next.js** (App Router, TypeScript) — framework principal
-- **Vercel AI SDK** — agent IA avec tool calling (jamais de calcul de prix par le LLM)
-- **Supabase** — base de données PostgreSQL (Demandes, Matrices, Devis, Relances, Logs, Clients)
-- **Resend** — envoi d'emails transactionnels
-- **pdf-lib** — génération du devis PDF côté serveur
-- **Jest + ts-jest** — tests de la fonction de pricing
+- calcul deterministe du devis dans `lib/calculer-devis.ts` ;
+- tests Jest du calcul dans `__tests__/calculer-devis.test.ts` ;
+- migration Supabase complete dans `neotravel_migration.sql` ;
+- route agent dans `app/api/agent/route.ts` ;
+- tools agent : `calculer_devis`, `enregistrer_lead`, `mettre_a_jour_statut`, `escalader_humain`, `envoyer_email` ;
+- generation du PDF dans `lib/devis-pdf.ts` ;
+- envoi email avec PDF en piece jointe dans `lib/email-devis.ts`.
 
-## Structure du projet
+Encore a finaliser selon le planning :
 
 ```
 neotravel/
@@ -55,70 +55,251 @@ neotravel/
     └── calculer-devis.test.ts  # 12 tests Jest sur la fonction de pricing
 ```
 
-## Installation locale
+## Installation
 
-### Prérequis
-- Node.js 18+
-- Un projet Supabase créé (voir section Variables d'environnement)
-
-### 1. Cloner le repo
+Installer les dependances :
 
 ```bash
-git clone https://github.com/Biantuadi/Neotravel.git
-cd neotravel
 npm install
 ```
 
-### 2. Variables d'environnement
-
-Créer un fichier `.env.local` à la racine (**ne jamais committer ce fichier**) :
-
-```env
-AI_GATEWAY_API_KEY=vck_...
-NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-RESEND_API_KEY=re_...
-```
-
-| Variable | Description | Où la trouver |
-|---|---|---|
-| `AI_GATEWAY_API_KEY` | Clé Vercel AI Gateway (accès au modèle Claude) | Vercel Dashboard > AI > Gateway |
-| `NEXT_PUBLIC_SUPABASE_URL` | URL du projet Supabase | Supabase > Settings > API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clé publique Supabase (lecture seule) | Supabase > Settings > API |
-| `SUPABASE_SERVICE_ROLE_KEY` | Clé service Supabase (contourne le RLS) | Supabase > Settings > API |
-| `RESEND_API_KEY` | Clé API pour l'envoi d'emails | resend.com — free tier : 3 000 emails/mois |
-
-### 3. Initialiser la base de données
-
-Aller dans **Supabase > SQL Editor**, coller le contenu de `neotravel_migration.sql` et exécuter. Cela crée toutes les tables, enums, index et politiques RLS.
-
-### 4. Lancer en développement
+Lancer le serveur de developpement :
 
 ```bash
 npm run dev
 ```
 
-Ouvrir [http://localhost:3000](http://localhost:3000) — ou double-cliquer sur `start-dev.bat` (Windows).
+Ouvrir ensuite :
 
-### 5. Lancer les tests
+```text
+http://localhost:3000
+```
+
+## Scripts disponibles
+
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+npm test
+```
+
+`npm test` lance Jest sur les tests du calcul de devis.
+
+## Variables d'environnement
+
+Creer un fichier `.env.local` a la racine du projet :
+
+```bash
+ANTHROPIC_API_KEY=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+RESEND_API_KEY=
+RESEND_FROM_EMAIL="NeoTravel <onboarding@resend.dev>"
+```
+
+Notes :
+
+- `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` alimentent le client public Supabase dans `lib/supabase.ts` ;
+- `SUPABASE_SERVICE_ROLE_KEY` est utilisee cote serveur par `supabaseAdmin` ;
+- `ANTHROPIC_API_KEY` sert au modele Anthropic appele par le Vercel AI SDK ;
+- `RESEND_API_KEY` est obligatoire pour envoyer un devis par email ;
+- `RESEND_FROM_EMAIL` peut etre remplace par une adresse verifiee dans Resend.
+
+Ne jamais commit le fichier `.env.local`.
+
+## Base de donnees Supabase
+
+Le schema est dans `neotravel_migration.sql`.
+
+Tables creees :
+
+- `clients`
+- `demandes`
+- `matrices`
+- `devis`
+- `relances`
+- `logs`
+
+Pour initialiser Supabase :
+
+1. ouvrir le SQL Editor Supabase ;
+2. copier le contenu de `neotravel_migration.sql` ;
+3. executer la migration ;
+4. renseigner les variables Supabase dans `.env.local`.
+
+Les politiques RLS sont activees et le backend utilise la cle `service_role` pour ecrire dans les tables.
+
+## Agent IA
+
+La route principale est :
+
+```text
+POST /api/agent
+```
+
+Fichier :
+
+```text
+app/api/agent/route.ts
+```
+
+Le prompt systeme est la constante `SYSTEM_PROMPT`.
+
+Le modele configure actuellement est :
+
+```ts
+anthropic('claude-sonnet-4-6')
+```
+
+Le runtime est force en Node.js avec :
+
+```ts
+export const runtime = 'nodejs'
+```
+
+C'est necessaire pour l'envoi email et la generation PDF cote serveur.
+
+## Tools de l'agent
+
+### `calculer_devis`
+
+Appelle `calculerDevis()` depuis `lib/calculer-devis.ts`.
+
+Parametres principaux :
+
+- `nbPassagers`
+- `distanceKm`
+- `dateDemande`
+- `dateDepart`
+- `typeVehicule`
+- `options.guideJours`
+- `options.nuitsChauffeur`
+- `options.peages`
+
+Retourne :
+
+- `prixHT`
+- `tva`
+- `prixTTC`
+- `lignes`
+- `coefficients`
+- `devise`
+
+### `enregistrer_lead`
+
+Insere une demande dans `demandes` avec le statut `nouveau_lead` et calcule un score de completude.
+
+### `mettre_a_jour_statut`
+
+Met a jour le statut d'une demande.
+
+Statuts possibles :
+
+- `nouveau_lead`
+- `incomplet`
+- `qualifie`
+- `devis_envoye`
+- `relance_1`
+- `relance_2`
+- `accepte`
+- `refuse`
+- `cas_complexe`
+- `cloture`
+
+### `escalader_humain`
+
+Passe une demande en `cas_complexe` et ajoute un log.
+
+### `envoyer_email`
+
+Genere le PDF, envoie l'email via Resend, insere une ligne dans `devis`, passe la demande en `devis_envoye` et ajoute un log.
+
+## Generation du devis PDF
+
+Fichier :
+
+```text
+lib/devis-pdf.ts
+```
+
+La fonction principale est :
+
+```ts
+genererDevisPdf()
+```
+
+Le PDF affiche :
+
+- la reference du devis ;
+- la date de generation ;
+- les coordonnees prospect ;
+- le trajet ;
+- le detail des lignes ;
+- le montant HT ;
+- la TVA ;
+- le montant TTC ;
+- les coefficients saison, urgence et capacite.
+
+## Envoi email
+
+Fichier :
+
+```text
+lib/email-devis.ts
+```
+
+La fonction principale est :
+
+```ts
+envoyerEmailDevis()
+```
+
+Elle :
+
+- verifie la presence de `RESEND_API_KEY` ;
+- genere le PDF avec `genererDevisPdf()` ;
+- envoie l'email au prospect ;
+- attache le PDF au message.
+
+## Modifier le pricing
+
+La logique tarifaire est dans :
+
+```text
+lib/calculer-devis.ts
+```
+
+Constantes principales :
+
+- `PRIX_PAR_KM`
+- `PRIX_MINIMUM`
+- `DISTANCE_MAX_KM`
+- `TVA`
+- `MARGE`
+- `PRIX_GUIDE_JOUR`
+- `PRIX_NUIT_CHAUFFEUR`
+- `CAPACITE_MAX`
+
+Fonctions de coefficients :
+
+- `coefSaison(mois)`
+- `coefUrgence(jours)`
+- `coefCapacite(nb)`
+
+Apres modification du pricing, lancer :
 
 ```bash
 npm test
 ```
 
-## Règle de pricing (SOCLE)
+Puis ajuster les valeurs attendues dans `__tests__/calculer-devis.test.ts` si la regle metier a volontairement change.
 
-La fonction `calculer_devis()` est **déterministe et ne doit jamais être appelée directement par le LLM**. L'agent IA l'expose comme un tool Vercel AI SDK — le LLM collecte les paramètres via le chat, puis appelle le tool. Tout le calcul de prix est fait en code.
+## Ajouter un statut
 
-**Matrices appliquées dans l'ordre :**
-1. Prix de base = distance × tarif/km selon le véhicule
-2. Coefficient saisonnalité (selon mois du départ)
-3. Coefficient urgence (selon délai demande → départ)
-4. Coefficient capacité (selon nombre de passagers)
-5. Options (guide, nuit chauffeur, péages)
-6. Marge commerciale +15%
-7. TVA 10%
+Modifier les fichiers suivants :
 
 ## Guide du repreneur
 
@@ -274,17 +455,66 @@ Ajouter les variables d'environnement dans **Supabase > Edge Functions > relance
 
 ## Équipe
 
-| Membre | Rôle |
-|--------|------|
-| Giovanni | `calculer_devis()`, tools agent IA, relances & tests finaux |
-| Béni | Supabase, route `/api/agent`, dashboard direction |
-| Paul | Init Next.js, interface prospect, documentation équipes |
-| Sarah | Maquettes & flow agent, génération PDF, documentation technique |
+Modifier la constante `SYSTEM_PROMPT` dans :
 
-## Calendrier
+```text
+app/api/agent/route.ts
+```
 
-| Livrable | Date |
-|----------|------|
-| Dossier de cadrage (L1) | 24 juin 2026 |
-| Prototype + artefacts (L2/L3) | 29 juin 2026 |
-| Soutenance | 1er juillet 2026 |
+Apres modification, tester au minimum :
+
+- demande incomplete ;
+- demande simple complete ;
+- demande urgente ;
+- cas complexe ;
+- envoi de devis.
+
+## Tests
+
+Les tests actuels couvrent surtout `calculerDevis()`.
+
+Commande :
+
+```bash
+npm test
+```
+
+Cas couverts :
+
+- cas simple ;
+- demande urgente ;
+- options guide, nuit chauffeur et peages ;
+- gros volume ;
+- 0 passager ;
+- capacite depassee ;
+- hors zone ;
+- dates incoherentes ;
+- distance invalide ;
+- bornes des coefficients.
+
+## Points d'attention
+
+- Le code contient actuellement plusieurs textes avec des problemes d'encodage dans certains fichiers sources. Cela n'empeche pas forcement l'execution, mais il faudra nettoyer l'encodage avant une remise propre.
+- `app/page.tsx` n'est pas encore l'interface conversationnelle finale.
+- Le PDF est genere cote serveur et utilise les polices standard de `pdf-lib`.
+- Les fichiers PDF ne sont pas encore stockes dans Supabase Storage : ils sont attaches directement a l'email.
+- `pdf_url` existe dans la table `devis`, mais n'est pas encore renseigne.
+- Les relances automatiques ne sont pas encore implementees dans ce depot.
+
+## Structure rapide
+
+```text
+app/
+  api/agent/route.ts     Route API de l'agent IA
+  page.tsx               Page frontend actuelle
+lib/
+  calculer-devis.ts      Calcul tarifaire pur
+  devis-pdf.ts           Generation du PDF
+  email-devis.ts         Envoi email Resend
+  supabase.ts            Clients Supabase
+types/
+  index.ts               Types metier partages
+__tests__/
+  calculer-devis.test.ts Tests Jest du pricing
+neotravel_migration.sql  Schema Supabase
+```
