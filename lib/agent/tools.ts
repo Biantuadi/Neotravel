@@ -14,7 +14,7 @@ async function geocodeVille(ville: string, apiKey: string): Promise<{ coords: [n
   const f = data.features[0]
   return {
     coords:  f.geometry.coordinates as [number, number],
-    country: (f.properties.country_code ?? 'unknown').toLowerCase(),
+    country: (f.properties.country_a ?? f.properties.country_code ?? 'unknown').toLowerCase(),
   }
 }
 
@@ -40,7 +40,8 @@ export const tools = (demande_id?: string) => ({
         if (!geoDepart) return { success: false, error: `Ville de départ introuvable : ${depart}` }
         if (!geoDest)   return { success: false, error: `Ville de destination introuvable : ${destination}` }
 
-        const international = geoDepart.country !== 'fr' || geoDest.country !== 'fr'
+        const isFrance = (c: string) => c === 'fr' || c === 'fra'
+        const international = !isFrance(geoDepart.country) || !isFrance(geoDest.country)
 
         const res = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
           method: 'POST',
