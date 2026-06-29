@@ -171,11 +171,11 @@ function useChatHook() {
           if (done) break
           const chunk = dec.decode(value, { stream: true })
 
-          // Détecter demande_id dans le flux (injecté par l'outil enregistrer_lead)
-          const idMatch = chunk.match(/\[DEMANDE_ID:([a-f0-9-]{36})\]/)
+          // Capturer demande_id injecté en fin de stream
+          const idMatch = chunk.match(/\sDEMANDE_ID:([a-f0-9-]{36})\s/)
           if (idMatch) demandeIdRef.current = idMatch[1]
 
-          buf += chunk.replace(/\[DEMANDE_ID:[a-f0-9-]{36}\]/g, '')
+          buf += chunk.replace(/\sDEMANDE_ID:[a-f0-9-]{36}\s/g, '')
           setMsgs(prev => {
             const u = [...prev]
             u[u.length - 1] = { role: 'assistant', content: buf }
@@ -686,10 +686,26 @@ function Hero({ onChatOpen }: { onChatOpen: () => void }) {
 // Search Bar
 // ─────────────────────────────────────────────────────────
 
-function SearchBar() {
+function SearchBar({ onSearch }: { onSearch: (msg: string) => void }) {
   const [destination, setDestination] = useState('')
   const [date, setDate] = useState('')
-  const [travelers, setTravelers] = useState('')
+  const [travelers, setTravelers] = useState('2')
+
+  function handleSearch() {
+    const parts: string[] = []
+    if (destination.trim()) parts.push(`destination : ${destination.trim()}`)
+    if (date) {
+      const d = new Date(date)
+      parts.push(`date de départ : ${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`)
+    }
+    if (travelers) parts.push(`${travelers} voyageurs`)
+
+    const msg = parts.length
+      ? `Bonjour, je souhaite organiser un trajet en autocar — ${parts.join(', ')}. Pouvez-vous m'établir un devis ?`
+      : "Bonjour, je souhaite organiser un trajet en autocar. Pouvez-vous m'aider ?"
+
+    onSearch(msg)
+  }
 
   return (
     <section className="bg-[#e8f5e9] py-5 sm:py-6 border-b border-[#c8e6c9]">
@@ -701,6 +717,7 @@ function SearchBar() {
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-bold text-[#9e9e9e] uppercase tracking-widest mb-0.5 hidden sm:block">Destination</p>
               <input value={destination} onChange={e => setDestination(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 placeholder="Où allez-vous ?"
                 className="w-full text-[14px] text-[#1a1a1a] font-medium outline-none bg-transparent placeholder:text-[#bbb] placeholder:font-normal" />
             </div>
@@ -727,13 +744,15 @@ function SearchBar() {
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-bold text-[#9e9e9e] uppercase tracking-widest mb-0.5 hidden sm:block">Voyageurs</p>
               <input type="number" min="1" max="500" value={travelers} onChange={e => setTravelers(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 placeholder="Nb de personnes"
                 className="w-full text-[14px] text-[#1a1a1a] font-medium outline-none bg-transparent placeholder:text-[#bbb] placeholder:font-normal" />
             </div>
           </div>
 
           {/* Button */}
-          <button className="bg-[#4caf50] hover:bg-[#43a047] text-white font-bold px-6 py-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer text-[14px] shadow-[0_4px_12px_rgba(76,175,80,0.35)] hover:shadow-[0_6px_20px_rgba(76,175,80,0.45)] whitespace-nowrap">
+          <button onClick={handleSearch}
+            className="bg-[#4caf50] hover:bg-[#43a047] text-white font-bold px-6 py-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer text-[14px] shadow-[0_4px_12px_rgba(76,175,80,0.35)] hover:shadow-[0_6px_20px_rgba(76,175,80,0.45)] whitespace-nowrap">
             <IconSearch /> <span className="hidden xs:inline">Rechercher</span>
           </button>
         </div>
@@ -1039,11 +1058,17 @@ export default function HomePage() {
 
   const openChat = useCallback(() => setChatOpen(true), [])
 
+  const handleSearch = useCallback((msg: string) => {
+    setChatOpen(true)
+    // Petit délai pour que le panel soit monté avant d'envoyer
+    setTimeout(() => chatState.sendPrefilled(msg), 80)
+  }, [chatState])
+
   return (
     <div className="bg-white min-h-screen">
       <Navbar onChatOpen={openChat} />
       <Hero onChatOpen={openChat} />
-      <SearchBar />
+      <SearchBar onSearch={handleSearch} />
       <DestinationsSection onBook={openChat} />
       <WhySection />
       <CTABanner onBook={openChat} />
