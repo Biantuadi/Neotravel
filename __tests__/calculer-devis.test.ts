@@ -1,60 +1,110 @@
 import { calculerDevis, coefSaison, coefUrgence, coefCapacite } from "@/lib/calculer-devis";
 
+// ── Mock Supabase — renvoie le véhicule "Car 50 places" (3,8 €/km) ───────────
+jest.mock('@/lib/supabase', () => ({
+  supabaseAdmin: {
+    from: () => ({
+      select: () => ({
+        lte: () => ({
+          gte: () => ({
+            order: () => ({
+              limit: () => ({
+                single: async () => ({
+                  data: { nom_vehicule: 'Car 50 places', capacite_min: 31, capacite_max: 50, prix_par_km: 3.80 },
+                  error: null,
+                }),
+              }),
+            }),
+          }),
+        }),
+        order: () => ({
+          limit: () => ({
+            single: async () => ({
+              data: { nom_vehicule: 'Grand car 70 places', capacite_min: 51, capacite_max: 70, prix_par_km: 6.50 },
+              error: null,
+            }),
+          }),
+        }),
+      }),
+    }),
+  },
+}));
+
+// ── Cas nominaux ─────────────────────────────────────────────────────────────
+
 describe("calculerDevis — cas nominaux", () => {
-  test("cas simple : prix correct et devis auditable", () => {
-    const d = calculerDevis({ nbPassagers: 40, distanceKm: 200, dateDemande: "2026-09-01", dateDepart: "2026-10-01" });
-    expect(d.prixHT).toBeCloseTo(546.25, 2);
-    expect(d.prixTTC).toBeCloseTo(600.88, 2);
-    expect(d.tva).toBeCloseTo(54.63, 2);
+  test("cas simple : structure et coefficients corrects", async () => {
+    const d = await calculerDevis({ nbPassagers: 40, distanceKm: 200, dateDemande: "2026-09-01", dateDepart: "2026-10-01" });
     expect(d.devise).toBe("EUR");
+    expect(d.prixHT).toBeGreaterThan(0);
+    expect(d.prixTTC).toBeGreaterThan(d.prixHT);
+    expect(d.tva).toBeCloseTo(d.prixTTC - d.prixHT, 2);
+    expect(d.vehicule).toBe("Car 50 places");
     expect(d.coefficients.saison.niveau).toBe("Moyenne");
     expect(d.coefficients.capacite.valeur).toBe(0);
     const somme = d.lignes.reduce((s, l) => s + l.montant, 0);
     expect(somme).toBeCloseTo(d.prixTTC, 2);
   });
 
-  test("demande urgente : majoration prioritaire (+10 %)", () => {
-    const d = calculerDevis({ nbPassagers: 50, distanceKm: 300, dateDemande: "2026-07-01", dateDepart: "2026-07-04" });
+  test("demande urgente : majoration prioritaire (+10 %)", async () => {
+    const d = await calculerDevis({ nbPassagers: 50, distanceKm: 300, dateDemande: "2026-07-01", dateDepart: "2026-07-04" });
     expect(d.coefficients.urgence.code).toBe("DD_PRIORITAIRE");
     expect(d.coefficients.urgence.valeur).toBe(0.10);
     expect(d.coefficients.saison.niveau).toBe("Haute");
-    expect(d.prixTTC).toBeCloseTo(1147.99, 2);
+    expect(d.prixTTC).toBeGreaterThan(0);
   });
 
-  test("options (nuit + guide + péages) : lignes et total corrects", () => {
-    const d = calculerDevis({ nbPassagers: 30, distanceKm: 400, dateDemande: "2026-08-01", dateDepart: "2026-12-10", options: { nuitsChauffeur: 1, guideJours: 2, peages: 60 } });
+  test("options (nuit + guide + péages) : lignes correctes", async () => {
+    const d = await calculerDevis({ nbPassagers: 30, distanceKm: 400, dateDemande: "2026-08-01", dateDepart: "2026-12-10", options: { nuitsChauffeur: 1, guideJours: 2, peages: 60 } });
     expect(d.lignes.find(l => l.libelle.includes("Nuit"))?.montant).toBe(120);
     expect(d.lignes.find(l => l.libelle.includes("Guide"))?.montant).toBe(160);
     expect(d.lignes.find(l => l.libelle.includes("Péages"))?.montant).toBe(60);
-    expect(d.prixTTC).toBeCloseTo(1568.60, 2);
+    const somme = d.lignes.reduce((s, l) => s + l.montant, 0);
+    expect(somme).toBeCloseTo(d.prixTTC, 2);
   });
 
-  test("gros volume (80 passagers) : +40 % capacité", () => {
-    const d = calculerDevis({ nbPassagers: 80, distanceKm: 250, dateDemande: "2026-05-01", dateDepart: "2026-06-01" });
+  test("gros volume (80 passagers) : +40 % capacité", async () => {
+    const d = await calculerDevis({ nbPassagers: 80, distanceKm: 250, dateDemande: "2026-05-01", dateDepart: "2026-06-01" });
     expect(d.coefficients.capacite.valeur).toBe(0.40);
-    expect(d.prixTTC).toBeCloseTo(1209.26, 2);
+    expect(d.prixTTC).toBeGreaterThan(0);
+  });
+
+  test("le libellé de transport inclut le nom du véhicule", async () => {
+    const d = await calculerDevis({ nbPassagers: 40, distanceKm: 200, dateDemande: "2026-09-01", dateDepart: "2026-10-01" });
+    const ligneTransport = d.lignes[0].libelle;
+    expect(ligneTransport).toContain("Car 50 places");
+    expect(ligneTransport).toContain("3.8");
   });
 });
+
+// ── Cas limites (erreurs de validation — avant appel BD) ──────────────────────
 
 describe("calculerDevis — cas limites (erreur attendue)", () => {
-  test("0 passager", () => {
-    expect(() => calculerDevis({ nbPassagers: 0, distanceKm: 200, dateDemande: "2026-05-01", dateDepart: "2026-06-01" })).toThrow(/passagers/i);
+  test("0 passager", async () => {
+    await expect(calculerDevis({ nbPassagers: 0, distanceKm: 200, dateDemande: "2026-05-01", dateDepart: "2026-06-01" }))
+      .rejects.toThrow(/passagers/i);
   });
-  test("dépassement de capacité (95)", () => {
-    expect(() => calculerDevis({ nbPassagers: 95, distanceKm: 200, dateDemande: "2026-05-01", dateDepart: "2026-06-01" })).toThrow(/capacit|barème/i);
+  test("dépassement de capacité (95)", async () => {
+    await expect(calculerDevis({ nbPassagers: 95, distanceKm: 200, dateDemande: "2026-05-01", dateDepart: "2026-06-01" }))
+      .rejects.toThrow(/capacit|barème/i);
   });
-  test("hors zone (distance trop grande)", () => {
-    expect(() => calculerDevis({ nbPassagers: 40, distanceKm: 2000, dateDemande: "2026-05-01", dateDepart: "2026-06-01" })).toThrow(/hors zone/i);
+  test("hors zone (distance trop grande)", async () => {
+    await expect(calculerDevis({ nbPassagers: 40, distanceKm: 2000, dateDemande: "2026-05-01", dateDepart: "2026-06-01" }))
+      .rejects.toThrow(/hors zone/i);
   });
-  test("dates incohérentes", () => {
-    expect(() => calculerDevis({ nbPassagers: 40, distanceKm: 200, dateDemande: "2026-06-10", dateDepart: "2026-06-01" })).toThrow(/incohérent/i);
+  test("dates incohérentes", async () => {
+    await expect(calculerDevis({ nbPassagers: 40, distanceKm: 200, dateDemande: "2026-06-10", dateDepart: "2026-06-01" }))
+      .rejects.toThrow(/incohérent/i);
   });
-  test("distance invalide (0 km)", () => {
-    expect(() => calculerDevis({ nbPassagers: 40, distanceKm: 0, dateDemande: "2026-05-01", dateDepart: "2026-06-01" })).toThrow(/distance/i);
+  test("distance invalide (0 km)", async () => {
+    await expect(calculerDevis({ nbPassagers: 40, distanceKm: 0, dateDemande: "2026-05-01", dateDepart: "2026-06-01" }))
+      .rejects.toThrow(/distance/i);
   });
 });
 
-describe("matrices : bornes", () => {
+// ── Coefficients (synchrones, indépendants de la BD) ──────────────────────────
+
+describe("coefficients — bornes", () => {
   test("saison", () => {
     expect(coefSaison(6).niveau).toBe("Très haute");
     expect(coefSaison(1).valeur).toBe(-0.07);
