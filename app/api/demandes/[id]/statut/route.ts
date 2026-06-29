@@ -26,8 +26,8 @@ export async function PATCH(
 
   await supabaseAdmin.from('logs').insert({
     demande_id: id,
-    type_log: 'statut_change',
-    message: `Statut mis à jour → ${statut}${note ? ' (avec note)' : ''}`,
+    action: `statut_change:${statut}`,
+    outil_utilise: 'backoffice',
   })
 
   return NextResponse.json({ ok: true })

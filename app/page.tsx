@@ -418,7 +418,6 @@ function Navbar({ onChatOpen }: { onChatOpen: () => void }) {
     { label: 'Destinations', href: '#destinations' },
     { label: 'Expériences', href: '#experiences' },
     { label: 'Offres', href: '#offres' },
-    { label: 'À propos', href: '#apropos' },
   ]
 
   return (
@@ -1037,9 +1036,10 @@ function Footer() {
   return (
     <footer className="bg-[#0d0d0d] py-14 px-6 lg:px-10" id="apropos">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-10 border-b border-white/8">
-          <div className="md:col-span-2">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-10 pb-10 border-b border-white/8">
+          <div>
             <div className="flex items-center gap-2.5 mb-4">
+
               <div className="w-8 h-8 rounded-lg bg-[#2e7d32] flex items-center justify-center">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/>
@@ -1054,24 +1054,9 @@ function Footer() {
             </p>
           </div>
           <div>
-            <p className="text-white font-semibold text-[13px] mb-4">Navigation</p>
-            <div className="space-y-2.5">
-              {['Destinations', 'Expériences', 'Offres', 'À propos'].map(l => (
-                <a key={l} href="#" className="block text-white/40 hover:text-white text-[13px] transition-colors">{l}</a>
-              ))}
-            </div>
-          </div>
-          <div>
             <p className="text-white font-semibold text-[13px] mb-4">Légal</p>
             <div className="space-y-2.5">
-              {[
-                { label: 'Mentions légales', href: '#' },
-                { label: 'Confidentialité', href: '/rgpd' },
-                { label: 'CGV', href: '#' },
-                { label: 'Contact', href: '#' },
-              ].map(l => (
-                <Link key={l.label} href={l.href} className="block text-white/40 hover:text-white text-[13px] transition-colors">{l.label}</Link>
-              ))}
+              <Link href="/rgpd" className="block text-white/40 hover:text-white text-[13px] transition-colors">Confidentialité & RGPD</Link>
             </div>
           </div>
         </div>

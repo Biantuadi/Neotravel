@@ -8,7 +8,9 @@ export interface EnvoyerEmailDevisParams {
   reference?: string
 }
 
-const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'NeoTravel <onboarding@resend.dev>'
+const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev'
+const isTestMode = fromEmail.includes('resend.dev')
+const testRedirectTo = process.env.RESEND_TEST_EMAIL ?? 'biantuadikevin@gmail.com'
 
 export async function envoyerEmailDevis({
   prospect,
@@ -23,10 +25,14 @@ export async function envoyerEmailDevis({
   const pdfBytes = await genererDevisPdf({ devis, prospect, reference })
   const pdfContent = Buffer.from(pdfBytes)
 
+  const toEmail = isTestMode ? testRedirectTo : prospect.email
+
   const { data, error } = await resend.emails.send({
     from: fromEmail,
-    to: prospect.email,
-    subject: 'Votre devis NeoTravel',
+    to: toEmail,
+    subject: isTestMode
+      ? `[TEST → ${prospect.email}] Votre devis NeoTravel`
+      : 'Votre devis NeoTravel',
     html: `
       <p>Bonjour ${escapeHtml(prospect.nom)},</p>
       <p>Merci pour votre demande. Vous trouverez votre devis NeoTravel en piece jointe.</p>

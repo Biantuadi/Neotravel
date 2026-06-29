@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev'
+const isTestMode = fromEmail.includes('resend.dev')
+const testRedirectTo = process.env.RESEND_TEST_EMAIL ?? 'biantuadikevin@gmail.com'
 
 export async function POST(
   _req: Request,
@@ -33,10 +35,14 @@ export async function POST(
     ? new Date(demande.date_depart).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
     : 'à définir'
 
+  const toEmail = isTestMode ? testRedirectTo : demande.email
+
   const { error: sendError } = await resend.emails.send({
     from: fromEmail,
-    to: demande.email,
-    subject: 'Votre demande NeoTravel — Suivi de dossier',
+    to: toEmail,
+    subject: isTestMode
+      ? `[TEST → ${demande.email}] Votre demande NeoTravel — Suivi de dossier`
+      : 'Votre demande NeoTravel — Suivi de dossier',
     html: `
       <p>Bonjour ${nom},</p>
       <p>Notre équipe commerciale a bien pris en charge votre demande de transport de groupe :</p>
@@ -56,8 +62,8 @@ export async function POST(
 
   await supabaseAdmin.from('logs').insert({
     demande_id: id,
-    type_log: 'email_manuel',
-    message: `Email de suivi envoyé manuellement à ${demande.email}`,
+    action: 'email_manuel',
+    outil_utilise: 'backoffice',
   })
 
   return NextResponse.json({ ok: true })
