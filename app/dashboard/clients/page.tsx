@@ -34,7 +34,7 @@ async function getClientsData() {
       .select(`
         id, nom, email, telephone, nb_demandes, derniere_demande, created_at,
         demandes (
-          id, depart, destination, date_depart, statut,
+          id, depart, destination, date_depart, statut, email, telephone,
           devis ( id, prix_ttc, statut ),
           relances ( id, type, date_programmee, statut )
         )
@@ -52,16 +52,21 @@ async function getClientsData() {
     type RawDemande = {
       id: string; depart: string | null; destination: string | null;
       date_depart: string | null; statut: string;
+      email?: string | null; telephone?: string | null;
       devis?: { id: string; prix_ttc: number; statut: string }[]
       relances?: { id: string; type: string; date_programmee: string; statut: string }[]
     }
     const rawDemandes = (c.demandes ?? []) as RawDemande[]
+    // Fallback : prend l'email/tel depuis la première demande si absent sur le client
+    const firstDemande = rawDemandes[0]
+    const email = c.email ?? firstDemande?.email ?? null
+    const telephone = c.telephone ?? firstDemande?.telephone ?? null
 
     return {
       id: c.id,
       nom: c.nom,
-      email: c.email,
-      telephone: c.telephone,
+      email,
+      telephone,
       nb_demandes: c.nb_demandes,
       derniere_demande: c.derniere_demande,
       created_at: c.created_at,
