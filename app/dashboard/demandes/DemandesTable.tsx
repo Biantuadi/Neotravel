@@ -181,11 +181,11 @@ function DemandeDrawer({
             <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Contact</p>
             <div style={{ background: '#f8fafc', borderRadius: 10, overflow: 'hidden' }}>
               {[
-                { icon: '✉', label: 'Email', value: demande.email, href: demande.email ? `mailto:${demande.email}` : undefined },
-                { icon: '☎', label: 'Téléphone', value: demande.telephone, href: demande.telephone ? `tel:${demande.telephone}` : undefined },
+                { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>, label: 'Email', value: demande.email, href: demande.email ? `mailto:${demande.email}` : undefined },
+                { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .09h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>, label: 'Téléphone', value: demande.telephone, href: demande.telephone ? `tel:${demande.telephone}` : undefined },
               ].map(({ icon, label, value, href }) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                  <span style={{ fontSize: 14, width: 20, textAlign: 'center', color: '#94a3b8' }}>{icon}</span>
+                  <span style={{ width: 20, display: 'flex', justifyContent: 'center', color: '#94a3b8' }}>{icon}</span>
                   <span style={{ fontSize: 12, color: '#94a3b8', width: 80 }}>{label}</span>
                   {href
                     ? <a href={href} style={{ fontSize: 13, color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>{value}</a>
@@ -194,7 +194,7 @@ function DemandeDrawer({
                 </div>
               ))}
               <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 14, width: 20, textAlign: 'center', color: '#94a3b8' }}>📅</span>
+                <span style={{ width: 20, display: 'flex', justifyContent: 'center', color: '#94a3b8' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
                 <span style={{ fontSize: 12, color: '#94a3b8', width: 80 }}>Créée</span>
                 <span style={{ fontSize: 13, color: '#0f172a' }}>{formatDate(demande.date_creation, true)}</span>
               </div>
@@ -252,19 +252,24 @@ function DemandeDrawer({
                   disabled={sendingEmail}
                   style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: emailSent ? '#f0fdf4' : 'white', cursor: 'pointer', fontSize: 13, color: emailSent ? '#16a34a' : '#0f172a', transition: 'all 0.15s', opacity: sendingEmail ? 0.6 : 1 }}
                 >
-                  <span style={{ fontSize: 15 }}>{emailSent ? '✓' : '✉'}</span>
+                  {emailSent
+                    ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                  }
                   {sendingEmail ? 'Envoi en cours...' : emailSent ? 'Email envoyé !' : 'Envoyer un email de suivi'}
                 </button>
               )}
               {emailError && <p style={{ fontSize: 12, color: '#dc2626', margin: '2px 0 0 4px' }}>{emailError}</p>}
               {demande.telephone && (
                 <a href={`tel:${demande.telephone}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: 'white', fontSize: 13, color: '#0f172a', textDecoration: 'none' }}>
-                  <span style={{ fontSize: 15 }}>☎</span> Appeler le prospect
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .09h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                  Appeler le prospect
                 </a>
               )}
               {demande.statut === 'cas_complexe' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 10, background: '#faf5ff', border: '1.5px solid #e9d5ff', fontSize: 13, color: '#7c3aed' }}>
-                  <span>⚡</span> Cas complexe — traitement manuel requis
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  Cas complexe — traitement manuel requis
                 </div>
               )}
             </div>
@@ -359,7 +364,7 @@ export default function DemandesTable({ demandes: initialDemandes }: { demandes:
       {/* Liste */}
       {filtered.length === 0 ? (
         <div style={{ background: 'white', border: '1.5px solid #f1f5f9', borderRadius: 14, padding: '60px 24px', textAlign: 'center' }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
+          <div style={{ marginBottom: 12, color: '#cbd5e1' }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>
           <p style={{ fontSize: 15, fontWeight: 500, color: '#0f172a', margin: '0 0 6px' }}>Aucun cas transféré</p>
           <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>Les demandes escaladées par l&apos;IA apparaîtront ici.</p>
         </div>
