@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from 'react'
 
+const PAGE_SIZE = 15
+
 type StatutDevis = 'brouillon' | 'envoye' | 'accepte' | 'refuse' | 'expire'
 
 export interface DevisRow {
@@ -69,6 +71,28 @@ const IconFilter = () => (
     <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
   </svg>
 )
+function Pagination({ page, total, pageSize, onChange }: { page: number; total: number; pageSize: number; onChange: (p: number) => void }) {
+  const totalPages = Math.ceil(total / pageSize)
+  if (totalPages <= 1) return null
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+      <span style={{ fontSize: 12, color: '#94a3b8' }}>{(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} sur {total}</span>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button onClick={() => onChange(page - 1)} disabled={page === 1} style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid #e2e8f0', background: 'white', cursor: page === 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: page === 1 ? '#cbd5e1' : '#475569' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        {Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1).reduce<(number | '...')[]>((acc, p, i, arr) => { if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('...'); acc.push(p); return acc }, []).map((p, i) =>
+          p === '...' ? <span key={`e${i}`} style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#94a3b8' }}>…</span>
+          : <button key={p} onClick={() => onChange(p as number)} style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid', borderColor: page === p ? '#2563eb' : '#e2e8f0', background: page === p ? '#eff6ff' : 'white', cursor: 'pointer', fontSize: 13, fontWeight: page === p ? 600 : 400, color: page === p ? '#2563eb' : '#475569' }}>{p}</button>
+        )}
+        <button onClick={() => onChange(page + 1)} disabled={page === totalPages} style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid #e2e8f0', background: 'white', cursor: page === totalPages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: page === totalPages ? '#cbd5e1' : '#475569' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const IconChevron = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round">
     <path d="M9 18l6-6-6-6"/>
@@ -89,6 +113,7 @@ export default function DevisTable({ devis }: { devis: DevisRow[] }) {
   const [search, setSearch] = useState('')
   const [statut, setStatut] = useState<StatutDevis | 'tous'>('tous')
   const [sort, setSort] = useState<'asc' | 'desc'>('desc')
+  const [page, setPage] = useState(1)
 
   const filtered = useMemo(() => {
     return devis
@@ -106,7 +131,10 @@ export default function DevisTable({ devis }: { devis: DevisRow[] }) {
         const db = new Date(b.created_at).getTime()
         return sort === 'desc' ? db - da : da - db
       })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [devis, search, statut, sort])
+
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <>
@@ -164,7 +192,7 @@ export default function DevisTable({ devis }: { devis: DevisRow[] }) {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {filtered.map(d => {
+          {paginated.map(d => {
             const cfg = STATUT_CONFIG[d.statut]
             const exp = expiration(d.envoye_le)
             const expiringSoon = exp && exp.daysLeft >= 0 && exp.daysLeft <= 2 && d.statut === 'envoye'
@@ -265,11 +293,7 @@ export default function DevisTable({ devis }: { devis: DevisRow[] }) {
         </div>
       )}
 
-      {filtered.length > 0 && (
-        <p style={{ fontSize: 12, color: '#94a3b8', textAlign: 'right', marginTop: 10 }}>
-          {filtered.length} devis
-        </p>
-      )}
+      <Pagination page={page} total={filtered.length} pageSize={PAGE_SIZE} onChange={setPage} />
     </>
   )
 }
