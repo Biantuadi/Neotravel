@@ -156,16 +156,17 @@ export const tools = (demandeRef: { current: string | undefined }) => ({
           .maybeSingle()
 
         if (existing) {
-          await supabaseAdmin.from('clients').update({
+          const { error: upErr } = await supabaseAdmin.from('clients').update({
             nom: params.nom_prospect,
             telephone: params.telephone ?? undefined,
-            nb_demandes: existing.nb_demandes + 1,
+            nb_demandes: (existing.nb_demandes ?? 0) + 1,
             derniere_demande: now,
             updated_at: now,
           }).eq('id', existing.id)
+          if (upErr) console.error('[enregistrer_lead] client update error:', upErr.message)
           client_id = existing.id
         } else {
-          const { data: created } = await supabaseAdmin
+          const { data: created, error: insErr } = await supabaseAdmin
             .from('clients')
             .insert({
               nom: params.nom_prospect,
@@ -176,10 +177,11 @@ export const tools = (demandeRef: { current: string | undefined }) => ({
             })
             .select('id')
             .single()
+          if (insErr) console.error('[enregistrer_lead] client insert error:', insErr.message)
           client_id = created?.id ?? null
         }
       } else {
-        const { data: created } = await supabaseAdmin
+        const { data: created, error: insErr } = await supabaseAdmin
           .from('clients')
           .insert({
             nom: params.nom_prospect,
@@ -189,6 +191,7 @@ export const tools = (demandeRef: { current: string | undefined }) => ({
           })
           .select('id')
           .single()
+        if (insErr) console.error('[enregistrer_lead] client insert (no email) error:', insErr.message)
         client_id = created?.id ?? null
       }
 
