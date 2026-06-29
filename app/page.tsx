@@ -202,6 +202,28 @@ function useChatHook() {
 // Chat Panel — style moderne
 // ─────────────────────────────────────────────────────────
 
+// Rendu markdown léger : **gras**, *italique*, - listes
+function MsgContent({ text, dark }: { text: string; dark: boolean }) {
+  const lines = text.split('\n')
+  return (
+    <div className="space-y-1">
+      {lines.map((line, i) => {
+        const isList = /^[-*•]\s/.test(line)
+        const content = (isList ? line.replace(/^[-*•]\s/, '') : line)
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        if (!content.trim()) return <div key={i} className="h-1" />
+        return (
+          <div key={i} className={`flex gap-1.5 ${isList ? 'items-start' : ''}`}>
+            {isList && <span className={`mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${dark ? 'bg-white/50' : 'bg-[#4caf50]'}`} />}
+            <span dangerouslySetInnerHTML={{ __html: content }} />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 const QUICK = ['Aller simple', 'Aller-retour', 'Multi-étapes', 'Demande de devis']
 
 function TypingDots() {
@@ -283,7 +305,7 @@ function ChatPanel({
                   ? 'bg-[#0f1923] text-white rounded-2xl rounded-br-sm'
                   : 'bg-white text-[#1a1a1a] rounded-2xl rounded-bl-sm border border-[#e8ecf0]'
               }`}>
-                {showTyping ? <TypingDots /> : m.content}
+                {showTyping ? <TypingDots /> : <MsgContent text={m.content} dark={isUser} />}
               </div>
             </div>
           )
@@ -328,6 +350,9 @@ function ChatPanel({
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
             placeholder="Votre message…"
             disabled={loading}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             className="flex-1 text-[13px] text-[#1a1a1a] outline-none bg-transparent placeholder:text-[#9ca3af] disabled:opacity-50"
           />
         </div>
@@ -427,12 +452,14 @@ function Navbar({ onChatOpen }: { onChatOpen: () => void }) {
 
         {/* CTA */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={onChatOpen}
+          <Link href="/dashboard"
             className="hidden sm:inline-flex items-center gap-2 bg-[#4caf50] hover:bg-[#43a047] text-white text-[13px] font-bold px-5 py-2.5 rounded-full transition-colors shadow-[0_4px_12px_rgba(76,175,80,0.4)]">
-            <IconChat />
-            Réserver
-          </button>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+            Dashboard
+          </Link>
           <button onClick={() => setMobileOpen(v => !v)} className="md:hidden text-white cursor-pointer p-1">
             {mobileOpen ? <IconX /> : <IconMenu />}
           </button>
@@ -448,10 +475,14 @@ function Navbar({ onChatOpen }: { onChatOpen: () => void }) {
               {l.label}
             </SmoothLink>
           ))}
-          <button onClick={() => { onChatOpen(); setMobileOpen(false) }}
+          <Link href="/dashboard" onClick={() => setMobileOpen(false)}
             className="w-full bg-[#4caf50] text-white font-bold px-5 py-3.5 rounded-full flex items-center justify-center gap-2 mt-2">
-            <IconChat /> Réserver
-          </button>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+            Dashboard
+          </Link>
         </div>
       )}
     </header>
@@ -689,7 +720,7 @@ function Hero({ onChatOpen }: { onChatOpen: () => void }) {
 function SearchBar({ onSearch }: { onSearch: (msg: string) => void }) {
   const [destination, setDestination] = useState('')
   const [date, setDate] = useState('')
-  const [travelers, setTravelers] = useState('2')
+  const [travelers, setTravelers] = useState('20')
 
   function handleSearch() {
     const parts: string[] = []
@@ -1097,8 +1128,8 @@ export default function HomePage() {
         </>
       )}
 
-      {/* Floating bubble */}
-      <div className="fixed bottom-5 right-4 sm:bottom-6 sm:right-6 z-50">
+      {/* Floating bubble — caché sur mobile quand le chat bottom sheet est ouvert */}
+      <div className={`fixed bottom-5 right-4 sm:bottom-6 sm:right-6 z-50 ${chatOpen ? 'hidden sm:block' : ''}`}>
         <button onClick={() => setChatOpen(v => !v)}
           className="relative w-14 h-14 sm:w-[60px] sm:h-[60px] bg-[#2e7d32] hover:bg-[#1b5e20] rounded-full shadow-[0_8px_30px_rgba(46,125,50,0.55)] flex items-center justify-center text-white transition-all cursor-pointer hover:scale-110 active:scale-95">
           <span className={`absolute transition-all duration-200 ${chatOpen ? 'opacity-0 rotate-90 scale-50' : 'opacity-100 rotate-0 scale-100'}`}>
