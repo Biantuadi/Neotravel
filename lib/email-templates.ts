@@ -149,6 +149,7 @@ export interface EmailDevisData {
   devisId: string
   dateGeneration: string
   ctaUrl?: string
+  refusUrl?: string
 }
 
 export function emailDevis(data: EmailDevisData): string {
@@ -156,6 +157,7 @@ export function emailDevis(data: EmailDevisData): string {
     prenom, depart, destination, dateDepart, dateRetour,
     nbPassagers, typeVehicule, montantTTC, devisId, dateGeneration,
     ctaUrl = 'https://neotravel-six.vercel.app',
+    refusUrl,
   } = data
 
   const montantFormate = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(montantTTC)
@@ -259,7 +261,7 @@ export function emailDevis(data: EmailDevisData): string {
         <p style="margin:0 0 6px;font-size:13px;color:#14141a;line-height:21px;">Le devis complet au format PDF est joint à cet email.</p>
         <p style="margin:0 0 32px;font-size:13px;color:#14141a;line-height:21px;">Pour accepter votre devis, cliquez sur le bouton ci-dessous ou répondez simplement <strong>OUI</strong>.</p>
 
-        <!-- CTA -->
+        <!-- CTAs -->
         <table cellpadding="0" cellspacing="0" role="presentation">
           <tr>
             <td style="background:#21a666;border-radius:28px;">
@@ -268,6 +270,14 @@ export function emailDevis(data: EmailDevisData): string {
                 Accepter le devis →
               </a>
             </td>
+            ${refusUrl ? `
+            <td style="width:12px;"></td>
+            <td style="background:#f1f5f9;border-radius:28px;border:1.5px solid #e2e8f0;">
+              <a href="${refusUrl}"
+                style="display:inline-block;padding:13px 24px;font-size:13px;font-weight:600;color:#64748b;text-decoration:none;white-space:nowrap;">
+                Décliner
+              </a>
+            </td>` : ''}
           </tr>
         </table>
 
@@ -293,6 +303,143 @@ export function emailDevis(data: EmailDevisData): string {
 </body>
 </html>`
 }
+
+// ── Template : Confirmation acceptation ──────────────────
+
+export interface EmailConfirmationData {
+  prenom: string
+  depart: string
+  destination: string
+  dateDepart: string
+  montantTTC: number
+  siteUrl?: string
+}
+
+export function emailConfirmation(data: EmailConfirmationData): string {
+  const { prenom, depart, destination, dateDepart, montantTTC, siteUrl = 'https://neotravel-six.vercel.app' } = data
+  const montantFormate = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(montantTTC)
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:32px 0;background:#f4f6fb;font-family:Inter,Arial,sans-serif;">
+  <table width="560" align="center" cellpadding="0" cellspacing="0" role="presentation"
+    style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:560px;width:100%;">
+    <tr><td style="background:#21a666;height:5px;line-height:5px;font-size:0;">&nbsp;</td></tr>
+    <tr>
+      <td style="background:#1a2138;padding:28px;">
+        <table cellpadding="0" cellspacing="0" role="presentation"><tr>
+          <td style="vertical-align:middle;"><div style="width:22px;height:22px;border-radius:50%;background:#e5534b;display:inline-block;"></div></td>
+          <td style="vertical-align:middle;padding-left:12px;"><span style="font-size:15px;font-weight:700;color:#ffffff;">Neotravel</span></td>
+        </tr></table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:28px;">
+        <div style="display:inline-block;background:#e0f7e8;border-radius:20px;padding:6px 14px;margin-bottom:22px;">
+          <span style="font-size:11px;font-weight:700;color:#21a666;">✓ Réservation confirmée</span>
+        </div>
+        <p style="margin:0 0 8px;font-size:20px;font-weight:800;color:#14141a;line-height:28px;">Votre réservation est confirmée !</p>
+        <div style="border-top:1px solid #e5ebf0;margin:20px 0;"></div>
+        <p style="margin:0 0 16px;font-size:13px;color:#14141a;line-height:21px;">Bonjour ${prenom},</p>
+        <p style="margin:0 0 20px;font-size:13px;color:#14141a;line-height:21px;">
+          Merci d'avoir accepté notre devis. Votre réservation pour le trajet <strong>${depart} → ${destination}</strong> (départ le ${dateDepart}) a bien été enregistrée.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#e0f7e8;border-radius:10px;margin-bottom:24px;">
+          <tr>
+            <td style="padding:14px 16px;">
+              <p style="margin:0 0 4px;font-size:12px;font-weight:500;color:#21a666;">Montant confirmé TTC</p>
+              <p style="margin:0;font-size:18px;font-weight:800;color:#21a666;">${montantFormate}</p>
+            </td>
+          </tr>
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f8fafc;border-radius:10px;margin-bottom:24px;">
+          <tr><td style="padding:16px;">
+            <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#475569;">Prochaines étapes</p>
+            <p style="margin:0 0 6px;font-size:12px;color:#14141a;line-height:18px;">→ Un conseiller vous contactera sous 24h pour finaliser les détails</p>
+            <p style="margin:0 0 6px;font-size:12px;color:#14141a;line-height:18px;">→ Vous recevrez les documents de voyage par email</p>
+            <p style="margin:0;font-size:12px;color:#14141a;line-height:18px;">→ Le règlement s'effectuera selon les modalités convenues</p>
+          </td></tr>
+        </table>
+        <p style="margin:0 0 0;font-size:12px;color:#707a8c;">Des questions ? Répondez à cet email ou appelez-nous directement.</p>
+        <p style="margin:12px 0 0;font-size:12px;color:#707a8c;">— L'équipe Neotravel</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="border-top:1px solid #e5ebf0;padding:14px 28px 20px;">
+        <p style="margin:0 0 4px;font-size:11px;color:#707a8c;">Neotravel — Transport de groupe | ${siteUrl}</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
+// ── Template : Email de courtoisie refus ─────────────────
+
+export interface EmailRefusData {
+  prenom: string
+  depart: string
+  destination: string
+  siteUrl?: string
+}
+
+export function emailCourtoisieRefus(data: EmailRefusData): string {
+  const { prenom, depart, destination, siteUrl = 'https://neotravel-six.vercel.app' } = data
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:32px 0;background:#f4f6fb;font-family:Inter,Arial,sans-serif;">
+  <table width="560" align="center" cellpadding="0" cellspacing="0" role="presentation"
+    style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:560px;width:100%;">
+    <tr><td style="background:#707a8c;height:5px;line-height:5px;font-size:0;">&nbsp;</td></tr>
+    <tr>
+      <td style="background:#1a2138;padding:28px;">
+        <table cellpadding="0" cellspacing="0" role="presentation"><tr>
+          <td style="vertical-align:middle;"><div style="width:22px;height:22px;border-radius:50%;background:#e5534b;display:inline-block;"></div></td>
+          <td style="vertical-align:middle;padding-left:12px;"><span style="font-size:15px;font-weight:700;color:#ffffff;">Neotravel</span></td>
+        </tr></table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:28px;">
+        <div style="display:inline-block;background:#f1f5f9;border-radius:20px;padding:6px 14px;margin-bottom:22px;">
+          <span style="font-size:11px;font-weight:700;color:#475569;">Dossier clôturé</span>
+        </div>
+        <p style="margin:0 0 8px;font-size:20px;font-weight:800;color:#14141a;line-height:28px;">Merci pour votre retour</p>
+        <div style="border-top:1px solid #e5ebf0;margin:20px 0;"></div>
+        <p style="margin:0 0 16px;font-size:13px;color:#14141a;line-height:21px;">Bonjour ${prenom},</p>
+        <p style="margin:0 0 16px;font-size:13px;color:#14141a;line-height:21px;">
+          Nous avons bien pris note de votre décision concernant votre projet de transport <strong>${depart} → ${destination}</strong>.
+        </p>
+        <p style="margin:0 0 20px;font-size:13px;color:#14141a;line-height:21px;">
+          Nous comprenons tout à fait et vous souhaitons bonne continuation. Si votre situation venait à évoluer ou si vous avez un autre projet à venir, nous serions ravis de vous accompagner à nouveau.
+        </p>
+        <table cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            <td style="background:#1a2138;border-radius:28px;">
+              <a href="${siteUrl}" style="display:inline-block;padding:12px 22px;font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;white-space:nowrap;">
+                Faire une nouvelle demande →
+              </a>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:24px 0 0;font-size:12px;color:#707a8c;">— L'équipe Neotravel</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="border-top:1px solid #e5ebf0;padding:14px 28px 20px;">
+        <p style="margin:0 0 4px;font-size:11px;color:#707a8c;">Neotravel — Transport de groupe | ${siteUrl}</p>
+        <p style="margin:0;font-size:10px;color:#a6adb8;">Aucune relance supplémentaire ne vous sera envoyée.</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
+// ── Template : Email générique ───────────────────────────
 
 export interface EmailGeneriquData {
   prenom: string
