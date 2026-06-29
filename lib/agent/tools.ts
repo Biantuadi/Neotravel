@@ -195,14 +195,17 @@ export const tools = (demandeRef: { current: string | undefined }) => ({
         client_id = created?.id ?? null
       }
 
-      // 2. Calculer l'urgence depuis date_depart
+      // 2. Calculer l'urgence depuis date_depart (aligné sur coefUrgence)
+      // DD_PRIORITAIRE (<=14J) et DD_URGENT (<=30J) → urgente
+      // DD_NORMAL (<=90J) → normale
+      // DD_3MOISETPLUS (>90J) → faible
       let urgence: 'faible' | 'normale' | 'urgente' = 'normale'
       if (params.date_depart) {
         const jours = Math.floor(
           (new Date(params.date_depart).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
         )
-        if (jours < 7)   urgence = 'urgente'
-        else if (jours >= 90) urgence = 'faible'
+        if (jours <= 30)  urgence = 'urgente'
+        else if (jours > 90) urgence = 'faible'
       }
 
       // 3. Créer la demande liée au client

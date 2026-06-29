@@ -63,9 +63,9 @@ describe("calculerDevis — cas nominaux", () => {
     expect(somme).toBeCloseTo(d.prixTTC, 2);
   });
 
-  test("gros volume (80 passagers) : +40 % capacité", async () => {
-    const d = await calculerDevis({ nbPassagers: 80, distanceKm: 250, dateDemande: "2026-05-01", dateDepart: "2026-06-01" });
-    expect(d.coefficients.capacite.valeur).toBe(0.40);
+  test("gros volume (59 passagers, max barème) : tranche 54–63 +15 % capacité", async () => {
+    const d = await calculerDevis({ nbPassagers: 59, distanceKm: 250, dateDemande: "2026-05-01", dateDepart: "2026-06-01" });
+    expect(d.coefficients.capacite.valeur).toBe(0.15);
     expect(d.prixTTC).toBeGreaterThan(0);
   });
 
@@ -88,9 +88,10 @@ describe("calculerDevis — cas limites (erreur attendue)", () => {
     await expect(calculerDevis({ nbPassagers: 95, distanceKm: 200, dateDemande: "2026-05-01", dateDepart: "2026-06-01" }))
       .rejects.toThrow(/capacit|barème/i);
   });
-  test("hors zone (distance trop grande)", async () => {
-    await expect(calculerDevis({ nbPassagers: 40, distanceKm: 2000, dateDemande: "2026-05-01", dateDepart: "2026-06-01" }))
-      .rejects.toThrow(/hors zone/i);
+  test("longue distance (2000 km) : acceptée sans limite de distance", async () => {
+    const d = await calculerDevis({ nbPassagers: 40, distanceKm: 2000, dateDemande: "2026-05-01", dateDepart: "2026-06-01" });
+    expect(d.prixTTC).toBeGreaterThan(0);
+    expect(d.distanceKm ?? 2000).toBe(2000);
   });
   test("dates incohérentes", async () => {
     await expect(calculerDevis({ nbPassagers: 40, distanceKm: 200, dateDemande: "2026-06-10", dateDepart: "2026-06-01" }))
