@@ -10,65 +10,65 @@ const sections = [
   {
     title: '1. Responsable du traitement',
     body: [
-      'NeoTravel est responsable du traitement des donnees collectees sur ce site dans le cadre des demandes de devis de transport de groupe.',
-      'Pour toute question relative aux donnees personnelles, le prospect peut contacter l equipe NeoTravel via les coordonnees indiquees sur le site.',
+      'NEOTRAVEL SAS — 55 Rue Raspail, 92300 Levallois-Perret — RCS Nanterre 529 307 167 — est responsable du traitement des donnees collectees sur ce site dans le cadre des demandes de devis de transport de groupe.',
+      'Pour toute question relative aux donnees personnelles, vous pouvez contacter notre equipe a l adresse : reservation@autocar-location.com',
     ],
   },
   {
     title: '2. Donnees collectees',
     body: [
-      'Lorsqu un prospect utilise le formulaire ou l assistant conversationnel, NeoTravel peut collecter son nom, son adresse email, son telephone, la ville de depart, la destination, les dates de trajet, le nombre de passagers et les informations utiles a la preparation du devis.',
-      'Des donnees techniques peuvent aussi etre conservees dans les logs applicatifs afin de suivre le bon fonctionnement du service et les actions realisees par l agent IA.',
+      'Lorsqu un prospect utilise l assistant conversationnel, NeoTravel peut collecter son nom, son adresse email, son telephone, la ville de depart, la destination, les dates de trajet, le nombre de passagers et les informations utiles a la preparation du devis.',
+      'Des donnees techniques sont conservees dans les logs applicatifs (horodatage, actions de l agent IA, statut des demandes) afin d assurer le suivi du service et la tracabilite des operations.',
     ],
   },
   {
     title: '3. Finalites du traitement',
     body: [
-      'Les donnees sont utilisees pour qualifier la demande, calculer un devis, envoyer le devis au prospect, assurer le suivi commercial, programmer des relances et ameliorer la qualite du service.',
-      'Les donnees ne sont pas utilisees pour prendre une decision entierement automatisee produisant un effet juridique. Les cas complexes peuvent etre transmis a un conseiller humain.',
+      'Les donnees sont utilisees pour qualifier la demande, calculer un devis, envoyer le devis au prospect, assurer le suivi commercial et programmer des relances automatiques.',
+      'Le calcul du devis est realise de maniere deterministe par un moteur de tarification — le modele IA ne prend aucune decision tarifaire autonome. Les demandes hors barème (groupe de plus de 59 personnes, trajet international) sont systematiquement transmises a un conseiller humain.',
     ],
   },
   {
     title: '4. Base legale',
     body: [
-      'Le traitement repose sur l execution de mesures precontractuelles lorsque le prospect demande un devis.',
-      'Certaines donnees peuvent egalement etre traitees sur la base de l interet legitime de NeoTravel, notamment pour le suivi des demandes, la securisation du service et l amelioration des processus internes.',
+      'Le traitement repose sur l execution de mesures precontractuelles lorsque le prospect demande un devis (article 6.1.b du RGPD).',
+      'Le suivi des demandes, la securisation du service et l amelioration des processus internes reposent sur l interet legitime de NeoTravel (article 6.1.f). Vous pouvez vous opposer a ces traitements a tout moment en nous contactant.',
     ],
   },
   {
-    title: '5. Destinataires des donnees',
+    title: '5. Destinataires et transferts hors UE',
     body: [
-      'Les donnees sont accessibles uniquement aux personnes habilitees chez NeoTravel et aux prestataires techniques necessaires au fonctionnement du service.',
-      'Le projet utilise notamment Supabase pour la base de donnees, Resend pour l envoi des emails et un fournisseur de modele IA pour traiter les messages de l assistant.',
+      'Les donnees sont accessibles aux personnes habilitees chez NeoTravel et aux sous-traitants techniques suivants : Supabase Inc. (hebergement base de donnees — region EU disponible), Resend Inc. (envoi d emails — Etats-Unis), Anthropic PBC (modele IA — Etats-Unis), OpenRouteService / HeiGIT (calcul de distance — Allemagne).',
+      'Les transferts vers Resend et Anthropic, etablis aux Etats-Unis, sont encadres par les clauses contractuelles types de la Commission europeenne (CCT) conformement a l article 46 du RGPD.',
     ],
   },
   {
     title: '6. Duree de conservation',
     body: [
-      'Les demandes et devis sont conserves pendant la duree necessaire au suivi commercial, puis archives ou supprimes selon les obligations legales applicables.',
-      'Les logs techniques sont conserves pour une duree limitee, proportionnee aux besoins de diagnostic, de securite et de demonstration du projet.',
+      'Les demandes et devis sont conserves 3 ans a compter du dernier contact, conformement aux obligations legales en matiere de droit commercial.',
+      'Les logs techniques sont conserves 12 mois a compter de leur creation, puis supprimes automatiquement.',
     ],
   },
   {
     title: '7. Droits des personnes',
     body: [
-      'Conformement au RGPD, chaque personne dispose d un droit d acces, de rectification, d effacement, de limitation, d opposition et de portabilite de ses donnees.',
-      'Pour exercer ces droits, la personne peut contacter NeoTravel. Une reponse sera apportee dans les delais prevus par la reglementation.',
-      'La personne peut egalement introduire une reclamation aupres de la CNIL si elle estime que ses droits ne sont pas respectes.',
+      'Conformement au RGPD, vous disposez d un droit d acces, de rectification, d effacement, de limitation, d opposition et de portabilite de vos donnees.',
+      'Pour exercer ces droits, contactez-nous a reservation@autocar-location.com. Une reponse sera apportee dans un delai d un mois conformement a l article 12 du RGPD.',
+      'Vous pouvez egalement introduire une reclamation aupres de la CNIL (www.cnil.fr) si vous estimez que vos droits ne sont pas respectes.',
     ],
   },
   {
     title: '8. Securite',
     body: [
-      'NeoTravel met en place des mesures techniques et organisationnelles pour proteger les donnees personnelles contre l acces non autorise, la perte, l alteration ou la divulgation.',
-      'Les cles d API et variables sensibles doivent rester cote serveur et ne jamais etre publiees dans le depot Git.',
+      'NeoTravel met en place des mesures techniques et organisationnelles pour proteger les donnees personnelles contre l acces non autorise, la perte, l alteration ou la divulgation non souhaitee.',
+      'L acces aux donnees en base est protege par des politiques de securite au niveau des lignes (Row Level Security) et les echanges transitent exclusivement via des connexions chiffrees (HTTPS / TLS).',
     ],
   },
   {
     title: '9. Cookies et traceurs',
     body: [
-      'Dans l etat actuel du projet, aucun dispositif publicitaire ou traceur marketing n est documente.',
-      'Si des outils d analyse ou de suivi sont ajoutes, cette page devra etre mise a jour et un mecanisme de consentement devra etre prevu lorsque la loi l exige.',
+      'Le site n utilise pas de cookies publicitaires ni de traceurs marketing tiers. Aucune donnee de navigation n est partagee avec des plateformes publicitaires.',
+      'Si des outils d analyse de trafic sont ajoutes ulterieurement, cette page sera mise a jour et un mecanisme de consentement sera mis en place conformement aux recommandations de la CNIL.',
     ],
   },
 ]
