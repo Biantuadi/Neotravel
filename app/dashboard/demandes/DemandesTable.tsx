@@ -22,23 +22,23 @@ export interface Demande {
   note_commerciale?: string | null
 }
 
-const URGENCE_CONFIG: Record<Urgence, { label: string; bg: string; text: string; dot: string }> = {
-  faible:   { label: 'Faible',  bg: 'bg-[rgba(112,122,140,0.12)]', text: 'text-[#707a8c]', dot: 'bg-[#707a8c]' },
-  normale:  { label: 'Normal',  bg: 'bg-[rgba(112,122,140,0.12)]', text: 'text-[#707a8c]', dot: 'bg-[#707a8c]' },
-  urgente:  { label: 'Urgent',  bg: 'bg-[rgba(242,156,18,0.12)]',  text: 'text-[#f29c12]', dot: 'bg-[#f29c12]' },
+const STATUT_CONFIG: Record<Statut, { label: string; color: string; bg: string; border: string }> = {
+  nouveau_lead: { label: 'Nouveau',      color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+  incomplet:    { label: 'Incomplet',    color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+  qualifie:     { label: 'Qualifié',     color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
+  devis_envoye: { label: 'Devis envoyé', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+  relance_1:    { label: 'Relance 1',    color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+  relance_2:    { label: 'Relance 2',    color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
+  accepte:      { label: 'Accepté',      color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+  refuse:       { label: 'Refusé',       color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+  cas_complexe: { label: 'Transféré',    color: '#7c3aed', bg: '#faf5ff', border: '#e9d5ff' },
+  cloture:      { label: 'Clôturé',      color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
 }
 
-const STATUT_CONFIG: Record<Statut, { label: string; bg: string; text: string }> = {
-  nouveau_lead: { label: 'Nouvelle',     bg: 'bg-[rgba(51,107,199,0.12)]',  text: 'text-[#336bc7]' },
-  incomplet:    { label: 'Incomplète',   bg: 'bg-[rgba(242,156,18,0.12)]',  text: 'text-[#f29c12]' },
-  qualifie:     { label: 'Qualifiée',    bg: 'bg-[rgba(76,175,80,0.12)]',   text: 'text-[#4caf50]' },
-  devis_envoye: { label: 'Devis envoyé', bg: 'bg-[rgba(51,107,199,0.12)]',  text: 'text-[#336bc7]' },
-  relance_1:    { label: 'Relance 1',    bg: 'bg-[rgba(242,156,18,0.12)]',  text: 'text-[#f29c12]' },
-  relance_2:    { label: 'Relance 2',    bg: 'bg-[rgba(242,156,18,0.12)]',  text: 'text-[#ed8f1a]' },
-  accepte:      { label: 'Acceptée',     bg: 'bg-[rgba(46,125,50,0.12)]',   text: 'text-[#2e7d32]' },
-  refuse:       { label: 'Refusée',      bg: 'bg-[rgba(229,57,53,0.12)]',   text: 'text-[#e53935]' },
-  cas_complexe: { label: 'Cas complexe', bg: 'bg-[rgba(124,58,237,0.12)]',  text: 'text-[#7c3aed]' },
-  cloture:      { label: 'Clôturée',     bg: 'bg-[rgba(112,122,140,0.12)]', text: 'text-[#707a8c]' },
+const URGENCE_BAR: Record<Urgence, string> = {
+  faible:  '#e5e7eb',
+  normale: '#93c5fd',
+  urgente: '#f97316',
 }
 
 const STATUT_TRANSITIONS: Record<Statut, Statut[]> = {
@@ -54,12 +54,8 @@ const STATUT_TRANSITIONS: Record<Statut, Statut[]> = {
   cloture:      [],
 }
 
-function Badge({ config }: { config: { label: string; bg: string; text: string } }) {
-  return (
-    <span className={`inline-flex items-center px-3 h-6 rounded-full text-[11px] font-medium ${config.bg} ${config.text} whitespace-nowrap`}>
-      {config.label}
-    </span>
-  )
+function initials(name: string) {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
 function formatDate(d: string | null, full = false) {
@@ -70,7 +66,17 @@ function formatDate(d: string | null, full = false) {
   )
 }
 
-// ── Drawer détail demande ─────────────────────────────────
+function timeAgo(d: string) {
+  const diff = Date.now() - new Date(d).getTime()
+  const h = Math.floor(diff / 3600000)
+  if (h < 1) return 'à l\'instant'
+  if (h < 24) return `il y a ${h}h`
+  const days = Math.floor(h / 24)
+  if (days === 1) return 'hier'
+  return `il y a ${days}j`
+}
+
+// ── Drawer ─────────────────────────────────────────────────
 
 function DemandeDrawer({
   demande,
@@ -88,25 +94,18 @@ function DemandeDrawer({
   const [note, setNote] = useState(demande.note_commerciale ?? '')
   const [selectedStatut, setSelectedStatut] = useState<Statut>(demande.statut)
   const [saved, setSaved] = useState(false)
+  const cfg = STATUT_CONFIG[selectedStatut]
+  const transitions = STATUT_TRANSITIONS[demande.statut]
+  const changed = selectedStatut !== demande.statut || note !== (demande.note_commerciale ?? '')
 
   async function handleSendEmail() {
-    setSendingEmail(true)
-    setEmailError('')
+    setSendingEmail(true); setEmailError('')
     try {
       const res = await fetch(`/api/demandes/${demande.id}/email`, { method: 'POST' })
-      if (res.ok) {
-        setEmailSent(true)
-        setTimeout(() => setEmailSent(false), 3000)
-      } else {
-        const body = await res.json()
-        setEmailError(body.error ?? 'Erreur envoi')
-      }
-    } finally {
-      setSendingEmail(false)
-    }
+      if (res.ok) { setEmailSent(true); setTimeout(() => setEmailSent(false), 3000) }
+      else { const b = await res.json(); setEmailError(b.error ?? 'Erreur envoi') }
+    } finally { setSendingEmail(false) }
   }
-
-  const transitions = STATUT_TRANSITIONS[demande.statut]
 
   async function handleSave() {
     setSaving(true)
@@ -116,143 +115,173 @@ function DemandeDrawer({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ statut: selectedStatut, note }),
       })
-      if (res.ok) {
-        onStatutChange(demande.id, selectedStatut, note)
-        setSaved(true)
-        setTimeout(() => setSaved(false), 2000)
-      }
-    } finally {
-      setSaving(false)
-    }
+      if (res.ok) { onStatutChange(demande.id, selectedStatut, note); setSaved(true); setTimeout(() => setSaved(false), 2000) }
+    } finally { setSaving(false) }
   }
-
-  const changed = selectedStatut !== demande.statut || note !== (demande.note_commerciale ?? '')
 
   return (
     <>
-      {/* Overlay */}
-      <div
-        className="fixed inset-0 bg-black/30 z-40 transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* Drawer */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-[440px] bg-white z-50 shadow-2xl flex flex-col overflow-hidden">
+      <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(2px)' }} onClick={onClose} />
+      <div className="fixed right-0 top-0 h-full z-50 flex flex-col" style={{ width: 480, background: '#fff', boxShadow: '-8px 0 40px rgba(0,0,0,0.12)' }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8eaed]">
-          <div>
-            <p className="text-[15px] font-bold text-[#12151a]">{demande.nom_prospect}</p>
-            <p className="text-[11px] text-[#707a8c]">Demande #{demande.id.slice(0, 8)}</p>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: cfg.bg, border: `1.5px solid ${cfg.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600, color: cfg.color, flexShrink: 0 }}>
+                {initials(demande.nom_prospect)}
+              </div>
+              <div>
+                <p style={{ fontSize: 16, fontWeight: 600, color: '#0f172a', margin: 0 }}>{demande.nom_prospect}</p>
+                <p style={{ fontSize: 12, color: '#94a3b8', margin: '2px 0 0' }}>#{demande.id.slice(0, 8)} · {timeAgo(demande.date_creation)}</p>
+              </div>
+            </div>
+            <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', fontSize: 18, flexShrink: 0 }}>×</button>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#f5f7fa] flex items-center justify-center text-[#707a8c] hover:bg-[#e8eaed] transition-colors text-[18px]">
-            ×
-          </button>
+
+          {/* Statut pill + urgence */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 14, alignItems: 'center' }}>
+            <span style={{ fontSize: 12, fontWeight: 500, padding: '4px 10px', borderRadius: 20, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
+              {cfg.label}
+            </span>
+            {demande.urgence === 'urgente' && (
+              <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20, background: '#fff7ed', color: '#ea580c', border: '1px solid #fed7aa' }}>
+                URGENT
+              </span>
+            )}
+            {demande.depart && demande.destination && (
+              <span style={{ fontSize: 12, color: '#64748b', marginLeft: 4 }}>{demande.depart} → {demande.destination}</span>
+            )}
+          </div>
         </div>
 
-        {/* Contenu scrollable */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
-          {/* Statuts actuels */}
-          <div className="flex gap-2 flex-wrap">
-            <Badge config={STATUT_CONFIG[demande.statut]} />
-            <Badge config={URGENCE_CONFIG[demande.urgence]} />
-          </div>
+        {/* Scroll area */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* Infos trajet */}
-          <Section title="Trajet">
-            <Row label="Départ"       value={demande.depart ?? '—'} />
-            <Row label="Destination"  value={demande.destination ?? '—'} />
-            <Row label="Date départ"  value={formatDate(demande.date_depart, true)} />
-            <Row label="Passagers"    value={demande.nb_passagers ? `${demande.nb_passagers} pers.` : '—'} />
-          </Section>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Trajet</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {[
+                { label: 'Départ', value: demande.depart ?? '—' },
+                { label: 'Destination', value: demande.destination ?? '—' },
+                { label: 'Date', value: formatDate(demande.date_depart, true) },
+                { label: 'Passagers', value: demande.nb_passagers ? `${demande.nb_passagers} pers.` : '—' },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 12px' }}>
+                  <p style={{ fontSize: 11, color: '#94a3b8', margin: '0 0 3px' }}>{label}</p>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: '#0f172a', margin: 0 }}>{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
 
-          {/* Infos contact */}
-          <Section title="Contact">
-            <Row label="Nom"       value={demande.nom_prospect} />
-            <Row label="Email"     value={demande.email ?? '—'} link={demande.email ? `mailto:${demande.email}` : undefined} />
-            <Row label="Téléphone" value={demande.telephone ?? '—'} link={demande.telephone ? `tel:${demande.telephone}` : undefined} />
-            <Row label="Créée le"  value={formatDate(demande.date_creation, true)} />
-          </Section>
-
-          {/* Changer le statut */}
-          {transitions.length > 0 && (
-            <Section title="Changer le statut">
-              <div className="flex flex-wrap gap-2 mt-1">
-                {transitions.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setSelectedStatut(s)}
-                    className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
-                      selectedStatut === s
-                        ? `${STATUT_CONFIG[s].bg} ${STATUT_CONFIG[s].text} border-current`
-                        : 'bg-white border-[#e0e2e6] text-[#707a8c] hover:border-[#336bc7] hover:text-[#336bc7]'
-                    }`}
-                  >
-                    {STATUT_CONFIG[s].label}
-                  </button>
-                ))}
+          {/* Contact */}
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Contact</p>
+            <div style={{ background: '#f8fafc', borderRadius: 10, overflow: 'hidden' }}>
+              {[
+                { icon: '✉', label: 'Email', value: demande.email, href: demande.email ? `mailto:${demande.email}` : undefined },
+                { icon: '☎', label: 'Téléphone', value: demande.telephone, href: demande.telephone ? `tel:${demande.telephone}` : undefined },
+              ].map(({ icon, label, value, href }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
+                  <span style={{ fontSize: 14, width: 20, textAlign: 'center', color: '#94a3b8' }}>{icon}</span>
+                  <span style={{ fontSize: 12, color: '#94a3b8', width: 80 }}>{label}</span>
+                  {href
+                    ? <a href={href} style={{ fontSize: 13, color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>{value}</a>
+                    : <span style={{ fontSize: 13, color: '#0f172a' }}>{value ?? '—'}</span>
+                  }
+                </div>
+              ))}
+              <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 14, width: 20, textAlign: 'center', color: '#94a3b8' }}>📅</span>
+                <span style={{ fontSize: 12, color: '#94a3b8', width: 80 }}>Créée</span>
+                <span style={{ fontSize: 13, color: '#0f172a' }}>{formatDate(demande.date_creation, true)}</span>
               </div>
-            </Section>
+            </div>
+          </div>
+
+          {/* Changer statut */}
+          {transitions.length > 0 && (
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Changer le statut</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {transitions.map(s => {
+                  const c = STATUT_CONFIG[s]
+                  const active = selectedStatut === s
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setSelectedStatut(s)}
+                      style={{
+                        padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s',
+                        background: active ? c.bg : 'white',
+                        color: active ? c.color : '#64748b',
+                        border: active ? `1.5px solid ${c.color}` : '1.5px solid #e2e8f0',
+                      }}
+                    >
+                      {c.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           )}
 
-          {/* Note commerciale */}
-          <Section title="Note interne">
+          {/* Note */}
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Note interne</p>
             <textarea
               value={note}
               onChange={e => setNote(e.target.value)}
-              placeholder="Ajouter une note pour l'équipe (ex : client rappelé le 30/06, en attente de confirmation...)"
+              placeholder="Ex : client rappelé le 29/06, en attente de confirmation budget..."
               rows={4}
-              className="w-full mt-1 text-[12px] text-[#12151a] placeholder:text-[#9ca3af] border border-[#e0e2e6] rounded-[8px] p-3 outline-none focus:border-[#336bc7] resize-none"
+              style={{ width: '100%', boxSizing: 'border-box', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 12px', fontSize: 13, color: '#0f172a', resize: 'none', outline: 'none', fontFamily: 'inherit', lineHeight: 1.5 }}
+              onFocus={e => { e.target.style.borderColor = '#2563eb'; e.target.style.background = '#fff' }}
+              onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc' }}
             />
-          </Section>
+          </div>
 
-          {/* Actions rapides */}
-          <Section title="Actions rapides">
-            <div className="flex flex-col gap-2 mt-1">
+          {/* Actions */}
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Actions rapides</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {demande.email && (
                 <button
                   onClick={handleSendEmail}
                   disabled={sendingEmail}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-[8px] bg-[#f5f7fa] text-[12px] text-[#12151a] hover:bg-[#e8eaed] transition-colors disabled:opacity-50 w-full text-left"
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: emailSent ? '#f0fdf4' : 'white', cursor: 'pointer', fontSize: 13, color: emailSent ? '#16a34a' : '#0f172a', transition: 'all 0.15s', opacity: sendingEmail ? 0.6 : 1 }}
                 >
-                  <span>✉</span>
-                  {sendingEmail ? 'Envoi...' : emailSent ? '✓ Email envoyé' : 'Envoyer un email de suivi'}
+                  <span style={{ fontSize: 15 }}>{emailSent ? '✓' : '✉'}</span>
+                  {sendingEmail ? 'Envoi en cours...' : emailSent ? 'Email envoyé !' : 'Envoyer un email de suivi'}
                 </button>
               )}
-              {emailError && (
-                <p className="text-[11px] text-[#e53935] px-1">{emailError}</p>
-              )}
+              {emailError && <p style={{ fontSize: 12, color: '#dc2626', margin: '2px 0 0 4px' }}>{emailError}</p>}
               {demande.telephone && (
-                <a
-                  href={`tel:${demande.telephone}`}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-[8px] bg-[#f5f7fa] text-[12px] text-[#12151a] hover:bg-[#e8eaed] transition-colors"
-                >
-                  <span>📞</span> Appeler le prospect
+                <a href={`tel:${demande.telephone}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: 'white', fontSize: 13, color: '#0f172a', textDecoration: 'none' }}>
+                  <span style={{ fontSize: 15 }}>☎</span> Appeler le prospect
                 </a>
               )}
               {demande.statut === 'cas_complexe' && (
-                <div className="flex items-center gap-2 px-4 py-2.5 rounded-[8px] bg-[rgba(124,58,237,0.08)] text-[12px] text-[#7c3aed]">
-                  <span>⚠</span> Cas complexe — traitement manuel requis
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 10, background: '#faf5ff', border: '1.5px solid #e9d5ff', fontSize: 13, color: '#7c3aed' }}>
+                  <span>⚡</span> Cas complexe — traitement manuel requis
                 </div>
               )}
             </div>
-          </Section>
+          </div>
         </div>
 
-        {/* Footer sticky */}
-        <div className="px-6 py-4 border-t border-[#e8eaed] bg-white">
-          {saved && (
-            <p className="text-[12px] text-[#4caf50] text-center mb-2">✓ Modifications enregistrées</p>
-          )}
+        {/* Footer */}
+        <div style={{ padding: '14px 24px', borderTop: '1px solid #f1f5f9', background: '#fafafa' }}>
+          {saved && <p style={{ fontSize: 12, color: '#16a34a', textAlign: 'center', marginBottom: 8 }}>✓ Modifications enregistrées</p>}
           <button
             onClick={handleSave}
             disabled={!changed || saving}
-            className={`w-full h-10 rounded-[8px] text-[13px] font-semibold transition-all ${
-              changed && !saving
-                ? 'bg-[#336bc7] text-white hover:bg-[#2558b0]'
-                : 'bg-[#f5f7fa] text-[#9ca3af] cursor-not-allowed'
-            }`}
+            style={{
+              width: '100%', height: 42, borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: changed ? 'pointer' : 'not-allowed', transition: 'all 0.15s', border: 'none',
+              background: changed && !saving ? '#2563eb' : '#f1f5f9',
+              color: changed && !saving ? 'white' : '#94a3b8',
+            }}
           >
             {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
           </button>
@@ -262,37 +291,12 @@ function DemandeDrawer({
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="text-[10px] font-semibold text-[#707a8c] uppercase tracking-wider mb-2">{title}</p>
-      <div className="bg-[#f9fafb] rounded-[10px] px-4 py-3 space-y-2">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function Row({ label, value, link }: { label: string; value: string; link?: string }) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-[11px] text-[#9ca3af] shrink-0">{label}</span>
-      {link ? (
-        <a href={link} className="text-[12px] text-[#336bc7] hover:underline truncate text-right">{value}</a>
-      ) : (
-        <span className="text-[12px] text-[#12151a] truncate text-right">{value}</span>
-      )}
-    </div>
-  )
-}
-
 // ── Table principale ──────────────────────────────────────
 
 export default function DemandesTable({ demandes: initialDemandes }: { demandes: Demande[] }) {
   const [demandes, setDemandes] = useState(initialDemandes)
   const [search, setSearch] = useState('')
   const [statutFilter, setStatutFilter] = useState<Statut | 'tous'>('tous')
-  const [urgenceFilter, setUrgenceFilter] = useState<Urgence | 'tous'>('tous')
   const [sort, setSort] = useState<'asc' | 'desc'>('desc')
   const [selected, setSelected] = useState<Demande | null>(null)
 
@@ -307,130 +311,142 @@ export default function DemandesTable({ demandes: initialDemandes }: { demandes:
     return demandes
       .filter(d => {
         const q = search.toLowerCase()
-        const matchSearch = !q ||
-          d.nom_prospect.toLowerCase().includes(q) ||
-          (d.depart ?? '').toLowerCase().includes(q) ||
-          (d.destination ?? '').toLowerCase().includes(q)
+        const match = !q || d.nom_prospect.toLowerCase().includes(q) || (d.depart ?? '').toLowerCase().includes(q) || (d.destination ?? '').toLowerCase().includes(q)
         const matchStatut = statutFilter === 'tous' || d.statut === statutFilter
-        const matchUrgence = urgenceFilter === 'tous' || d.urgence === urgenceFilter
-        return matchSearch && matchStatut && matchUrgence
+        return match && matchStatut
       })
       .sort((a, b) => {
         const da = new Date(a.date_creation).getTime()
         const db = new Date(b.date_creation).getTime()
         return sort === 'desc' ? db - da : da - db
       })
-  }, [demandes, search, statutFilter, urgenceFilter, sort])
+  }, [demandes, search, statutFilter, sort])
 
   return (
     <>
-      {/* Filtres */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        <div className="flex items-center bg-white border border-[#e0e2e6] rounded-[10px] h-10 px-3 gap-2 min-w-[200px] flex-1">
-          <span className="text-[#707a8c] text-[13px]">🔍</span>
+      {/* Barre de filtres */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 200, background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '0 12px', height: 40 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher..."
-            className="flex-1 text-[12px] text-[#12151a] placeholder:text-[#707a8c] outline-none bg-transparent"
+            placeholder="Rechercher un prospect, trajet..."
+            style={{ flex: 1, fontSize: 13, color: '#0f172a', border: 'none', outline: 'none', background: 'transparent' }}
           />
         </div>
 
         <select
           value={statutFilter}
           onChange={e => setStatutFilter(e.target.value as Statut | 'tous')}
-          className="bg-white border border-[#e0e2e6] rounded-[10px] h-10 px-3 text-[12px] text-[#707a8c] outline-none cursor-pointer"
+          style={{ background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 10, height: 40, padding: '0 12px', fontSize: 13, color: '#475569', outline: 'none', cursor: 'pointer' }}
         >
-          <option value="tous">Statut : Tous</option>
+          <option value="tous">Tous les statuts</option>
           {(Object.keys(STATUT_CONFIG) as Statut[]).map(s => (
             <option key={s} value={s}>{STATUT_CONFIG[s].label}</option>
           ))}
         </select>
 
-        <select
-          value={urgenceFilter}
-          onChange={e => setUrgenceFilter(e.target.value as Urgence | 'tous')}
-          className="bg-white border border-[#e0e2e6] rounded-[10px] h-10 px-3 text-[12px] text-[#707a8c] outline-none cursor-pointer"
-        >
-          <option value="tous">Urgence : Tous</option>
-          <option value="faible">Faible</option>
-          <option value="normale">Normale</option>
-          <option value="urgente">Urgente</option>
-        </select>
-
         <button
           onClick={() => setSort(s => s === 'desc' ? 'asc' : 'desc')}
-          className="bg-white border border-[#e0e2e6] rounded-[10px] h-10 px-3 text-[12px] text-[#707a8c] whitespace-nowrap cursor-pointer hover:bg-[#f5f7fa] transition-colors"
+          style={{ background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 10, height: 40, padding: '0 14px', fontSize: 13, color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
         >
-          Trier par date {sort === 'desc' ? '▾' : '▴'}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
+          {sort === 'desc' ? 'Plus récentes' : 'Plus anciennes'}
         </button>
       </div>
 
-      {/* Table desktop */}
-      <div className="hidden md:block">
-        <div className="bg-[#f5f7fa] rounded-[8px] h-10 grid grid-cols-[1fr_1fr_80px_80px_110px_110px] items-center px-4 mb-1">
-          {['CLIENT', 'TRAJET', 'DATE', 'PASS.', 'URGENCE', 'STATUT'].map(col => (
-            <p key={col} className="text-[11px] font-semibold text-[#707a8c]">{col}</p>
-          ))}
+      {/* Liste */}
+      {filtered.length === 0 ? (
+        <div style={{ background: 'white', border: '1.5px solid #f1f5f9', borderRadius: 14, padding: '60px 24px', textAlign: 'center' }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
+          <p style={{ fontSize: 15, fontWeight: 500, color: '#0f172a', margin: '0 0 6px' }}>Aucun cas transféré</p>
+          <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>Les demandes escaladées par l&apos;IA apparaîtront ici.</p>
         </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {filtered.map(d => {
+            const cfg = STATUT_CONFIG[d.statut]
+            const isUrgent = d.urgence === 'urgente'
+            return (
+              <div
+                key={d.id}
+                onClick={() => setSelected(d)}
+                style={{
+                  background: 'white',
+                  border: `1.5px solid ${selected?.id === d.id ? '#2563eb' : '#f1f5f9'}`,
+                  borderRadius: 14,
+                  padding: '14px 16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  transition: 'all 0.15s',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#2563eb'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 12px rgba(37,99,235,0.08)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = selected?.id === d.id ? '#2563eb' : '#f1f5f9'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none' }}
+              >
+                {/* Barre urgence gauche */}
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, borderRadius: '14px 0 0 14px', background: URGENCE_BAR[d.urgence] }} />
 
-        <div className="space-y-1">
-          {filtered.length === 0 ? (
-            <div className="bg-white border border-[#e0e2e6] rounded-[8px] py-8 text-center text-[13px] text-[#707a8c]">
-              Aucune demande trouvée
-            </div>
-          ) : filtered.map(d => (
-            <div
-              key={d.id}
-              onClick={() => setSelected(d)}
-              className="bg-white border border-[#e0e2e6] rounded-[8px] h-12 grid grid-cols-[1fr_1fr_80px_80px_110px_110px] items-center px-4 hover:bg-[#fafbfc] hover:border-[#336bc7] transition-all cursor-pointer group"
-            >
-              <p className="text-[12px] text-[#12151a] truncate pr-2 font-medium">{d.nom_prospect}</p>
-              <p className="text-[12px] text-[#707a8c] truncate pr-2">
-                {d.depart && d.destination ? `${d.depart} → ${d.destination}` : d.depart ?? '—'}
-              </p>
-              <p className="text-[12px] text-[#707a8c]">{formatDate(d.date_depart)}</p>
-              <p className="text-[12px] text-[#707a8c]">{d.nb_passagers ?? '—'}</p>
-              <Badge config={URGENCE_CONFIG[d.urgence]} />
-              <Badge config={STATUT_CONFIG[d.statut]} />
-            </div>
-          ))}
+                {/* Avatar */}
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: cfg.bg, border: `1.5px solid ${cfg.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: cfg.color, flexShrink: 0 }}>
+                  {initials(d.nom_prospect)}
+                </div>
+
+                {/* Infos principales */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.nom_prospect}</p>
+                    {isUrgent && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#fff7ed', color: '#ea580c', border: '1px solid #fed7aa', flexShrink: 0 }}>URGENT</span>}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {d.depart && d.destination ? (
+                      <span style={{ fontSize: 12, color: '#64748b' }}>{d.depart} → {d.destination}</span>
+                    ) : (
+                      <span style={{ fontSize: 12, color: '#94a3b8' }}>Trajet non précisé</span>
+                    )}
+                    {d.nb_passagers && (
+                      <>
+                        <span style={{ color: '#cbd5e1', fontSize: 10 }}>·</span>
+                        <span style={{ fontSize: 12, color: '#94a3b8' }}>{d.nb_passagers} pers.</span>
+                      </>
+                    )}
+                    {d.date_depart && (
+                      <>
+                        <span style={{ color: '#cbd5e1', fontSize: 10 }}>·</span>
+                        <span style={{ fontSize: 12, color: '#94a3b8' }}>{formatDate(d.date_depart)}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Droite : statut + date */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 500, padding: '3px 10px', borderRadius: 20, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
+                    {cfg.label}
+                  </span>
+                  <span style={{ fontSize: 11, color: '#94a3b8' }}>{timeAgo(d.date_creation)}</span>
+                </div>
+
+                {/* Flèche */}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}>
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </div>
+            )
+          })}
         </div>
-      </div>
-
-      {/* Cards mobile */}
-      <div className="md:hidden space-y-3">
-        {filtered.length === 0 ? (
-          <div className="bg-white border border-[#e0e2e6] rounded-xl py-8 text-center text-[13px] text-[#707a8c]">
-            Aucune demande trouvée
-          </div>
-        ) : filtered.map(d => (
-          <div
-            key={d.id}
-            onClick={() => setSelected(d)}
-            className="bg-white border border-[#e0e2e6] rounded-xl p-4 cursor-pointer active:bg-[#f5f7fa]"
-          >
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <p className="text-[13px] font-semibold text-[#12151a]">{d.nom_prospect}</p>
-              <Badge config={STATUT_CONFIG[d.statut]} />
-            </div>
-            <p className="text-[12px] text-[#707a8c] mb-1">
-              {d.depart && d.destination ? `${d.depart} → ${d.destination}` : '—'}
-            </p>
-            <div className="flex items-center gap-3 mt-2">
-              <span className="text-[11px] text-[#707a8c]">{formatDate(d.date_depart)}</span>
-              {d.nb_passagers && <span className="text-[11px] text-[#707a8c]">{d.nb_passagers} pass.</span>}
-              <Badge config={URGENCE_CONFIG[d.urgence]} />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filtered.length > 0 && (
-        <p className="text-[11px] text-[#707a8c] mt-3 text-right">{filtered.length} demande{filtered.length > 1 ? 's' : ''}</p>
       )}
 
-      {/* Drawer */}
+      {filtered.length > 0 && (
+        <p style={{ fontSize: 12, color: '#94a3b8', textAlign: 'right', marginTop: 10 }}>
+          {filtered.length} cas transféré{filtered.length > 1 ? 's' : ''}
+        </p>
+      )}
+
       {selected && (
         <DemandeDrawer
           demande={selected}
