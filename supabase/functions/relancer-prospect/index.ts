@@ -8,9 +8,12 @@ const SITE_URL = Deno.env.get('NEXT_PUBLIC_SITE_URL') ?? 'https://neotravel-six.
 const PHONE = Deno.env.get('NEOTRAVEL_PHONE') ?? '01 23 45 67 89'
 const DEVIS_TOKEN_SECRET = Deno.env.get('DEVIS_TOKEN_SECRET') ?? 'neotravel-devis-secret-change-me'
 
-const DELAI_RELANCE_1_JOURS = 2
-const DELAI_RELANCE_2_JOURS = 3
-const DELAI_CLOTURE_JOURS   = 2
+// DEMO_MODE=true → délais de 2 minutes au lieu de J+2/J+3/J+2
+const DEMO_MODE = Deno.env.get('DEMO_MODE') === 'true'
+
+const DELAI_RELANCE_1_MS = DEMO_MODE ? 2 * 60 * 1000          : 2 * 24 * 60 * 60 * 1000
+const DELAI_RELANCE_2_MS = DEMO_MODE ? 2 * 60 * 1000          : 3 * 24 * 60 * 60 * 1000
+const DELAI_CLOTURE_MS   = DEMO_MODE ? 2 * 60 * 1000          : 2 * 24 * 60 * 60 * 1000
 
 // Token HMAC-SHA256 via WebCrypto (Deno compatible)
 async function buildAcceptUrl(devisId: string): Promise<string> {
@@ -214,7 +217,8 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
   }
 }
 
-function joursEnMs(jours: number): number {
+// Gardé pour compatibilité mais on utilise les constantes directement
+function _joursEnMs(jours: number): number {
   return jours * 24 * 60 * 60 * 1000
 }
 
@@ -239,7 +243,7 @@ Deno.serve(async (req) => {
   const select = 'id, nom_prospect, email, depart, destination, date_depart, devis(id, prix_ttc, created_at, pdf_url)'
 
   // ── 1. Relance 1 ──────────────────────────────────────
-  const cutoff1 = new Date(now.getTime() - joursEnMs(DELAI_RELANCE_1_JOURS)).toISOString()
+  const cutoff1 = new Date(now.getTime() - DELAI_RELANCE_1_MS).toISOString()
   const { data: aRelancer1 } = await supabase
     .from('demandes')
     .select(select)
@@ -274,7 +278,7 @@ Deno.serve(async (req) => {
   }
 
   // ── 2. Relance 2 ──────────────────────────────────────
-  const cutoff2 = new Date(now.getTime() - joursEnMs(DELAI_RELANCE_2_JOURS)).toISOString()
+  const cutoff2 = new Date(now.getTime() - DELAI_RELANCE_2_MS).toISOString()
   const { data: aRelancer2 } = await supabase
     .from('demandes')
     .select(select)
@@ -309,7 +313,7 @@ Deno.serve(async (req) => {
   }
 
   // ── 3. Clôture automatique ────────────────────────────
-  const cutoff3 = new Date(now.getTime() - joursEnMs(DELAI_CLOTURE_JOURS)).toISOString()
+  const cutoff3 = new Date(now.getTime() - DELAI_CLOTURE_MS).toISOString()
   const { data: aCloturer } = await supabase
     .from('demandes')
     .select(select)
