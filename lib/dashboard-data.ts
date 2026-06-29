@@ -10,35 +10,41 @@ export interface RecentDemande {
   date_creation: string
 }
 
+export interface DayData {
+  jour: string
+  leads: number
+  devis: number
+}
+
 export interface DashboardData {
   leadsAujourdhui: number
   tauxConversion: number
   relancesAttente: number
   totalDemandes: number
 
-  // Pipeline devis
   devisEnvoyes: number
   devisAcceptes: number
   devisRefuses: number
+  devisEnCours: number
 
-  // Répartition statuts
   statutCounts: Record<string, number>
 
-  // Urgences
   urgentesTotal: number
-  urgentesTraitees: number  // %
+  urgentesTraitees: number
 
-  // Automatisation
   tauxAutomatisation: number
   dossiersEscalades: number
 
-  // Relances
   relancesEnvoyees: number
   relancesEnRetard: number
   relancesReponses: number
   tauxReponseRelances: number
 
-  // 5 dernières demandes
+  semaine: DayData[]
+
+  caPotentielHT: number
+  caAccepteHT: number
+
   recentDemandes: RecentDemande[]
 }
 
@@ -47,10 +53,16 @@ const STATUTS = [
   'relance_1', 'relance_2', 'accepte', 'refuse', 'cas_complexe', 'cloture',
 ]
 
+const DAYS_FR = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
+
 export async function getDashboardData(): Promise<DashboardData> {
   const now = new Date()
   const startOfDay = new Date(now)
   startOfDay.setHours(0, 0, 0, 0)
+
+  const day7ago = new Date(now)
+  day7ago.setDate(day7ago.getDate() - 6)
+  day7ago.setHours(0, 0, 0, 0)
 
   const [
     { count: leadsAujourdhui },
@@ -67,52 +79,48 @@ export async function getDashboardData(): Promise<DashboardData> {
     { count: relancesReponses },
     { data: statutRows },
     { data: recentRows },
+    { data: semaineLeads },
+    { data: semaineDevis },
+    { data: devisCA },
   ] = await Promise.all([
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .gte('date_creation', startOfDay.toISOString()),
-
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true }),
-
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .eq('statut', 'accepte'),
-
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .in('statut', ['devis_envoye', 'relance_1', 'relance_2', 'accepte', 'refuse']),
-
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .eq('statut', 'refuse'),
-
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .eq('urgence', 'urgente'),
-
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .eq('urgence', 'urgente')
       .in('statut', ['accepte', 'refuse', 'cloture', 'devis_envoye']),
-
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .eq('statut', 'cas_complexe'),
-
     supabaseAdmin.from('relances').select('*', { count: 'exact', head: true })
       .eq('statut', 'programmee'),
-
     supabaseAdmin.from('relances').select('*', { count: 'exact', head: true })
       .eq('statut', 'envoyee'),
-
     supabaseAdmin.from('relances').select('*', { count: 'exact', head: true })
       .eq('statut', 'programmee')
       .lt('date_programmee', now.toISOString()),
-
     supabaseAdmin.from('demandes').select('*', { count: 'exact', head: true })
       .in('statut', ['relance_1', 'relance_2', 'accepte', 'refuse']),
-
-    // Répartition par statut
     supabaseAdmin.from('demandes').select('statut'),
-
-    // 5 demandes les plus récentes
     supabaseAdmin.from('demandes')
       .select('id, nom_prospect, depart, destination, statut, urgence, date_creation')
       .order('date_creation', { ascending: false })
       .limit(5),
+    supabaseAdmin.from('demandes')
+      .select('date_creation')
+      .gte('date_creation', day7ago.toISOString()),
+    supabaseAdmin.from('demandes')
+      .select('date_creation')
+      .in('statut', ['devis_envoye', 'relance_1', 'relance_2', 'accepte', 'refuse'])
+      .gte('date_creation', day7ago.toISOString()),
+    supabaseAdmin.from('devis').select('prix_ht, statut'),
   ])
 
   const total = totalDemandes ?? 0
@@ -127,16 +135,46 @@ export async function getDashboardData(): Promise<DashboardData> {
   const relRet = relancesEnRetard ?? 0
   const relRep = relancesReponses ?? 0
 
-  const tauxConversion  = total > 0 ? Math.round((acc / total) * 100) : 0
-  const pctUrgTraitees  = urg > 0 ? Math.round((urgT / urg) * 100) : 0
-  const tauxAuto        = total > 0 ? Math.round(((total - cas) / total) * 100) : 0
-  const totalRelances   = relEnv + relAtt
-  const tauxRep         = totalRelances > 0 ? Math.round((relRep / totalRelances) * 100) : 0
+  const tauxConversion = total > 0 ? Math.round((acc / total) * 100) : 0
+  const pctUrgTraitees = urg > 0 ? Math.round((urgT / urg) * 100) : 0
+  const tauxAuto       = total > 0 ? Math.round(((total - cas) / total) * 100) : 0
+  const totalRelances  = relEnv + relAtt
+  const tauxRep        = totalRelances > 0 ? Math.round((relRep / totalRelances) * 100) : 0
+  const devisEnCours   = Math.max(0, env - acc - ref)
 
-  // Compter les statuts
   const statutCounts: Record<string, number> = Object.fromEntries(STATUTS.map(s => [s, 0]))
   for (const row of (statutRows ?? [])) {
     if (row.statut in statutCounts) statutCounts[row.statut]++
+  }
+
+  const leadsParJour: Record<string, number> = {}
+  const devisParJour: Record<string, number> = {}
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(day7ago)
+    d.setDate(d.getDate() + i)
+    const key = d.toISOString().slice(0, 10)
+    leadsParJour[key] = 0
+    devisParJour[key] = 0
+  }
+  for (const r of (semaineLeads ?? [])) {
+    const k = (r.date_creation as string).slice(0, 10)
+    if (k in leadsParJour) leadsParJour[k]++
+  }
+  for (const r of (semaineDevis ?? [])) {
+    const k = (r.date_creation as string).slice(0, 10)
+    if (k in devisParJour) devisParJour[k]++
+  }
+  const semaine: DayData[] = Object.keys(leadsParJour).map(key => ({
+    jour: DAYS_FR[new Date(key + 'T12:00:00').getDay()],
+    leads: leadsParJour[key],
+    devis: devisParJour[key],
+  }))
+
+  let caPotentielHT = 0
+  let caAccepteHT = 0
+  for (const d of (devisCA ?? [])) {
+    if (d.statut !== 'refuse') caPotentielHT += d.prix_ht ?? 0
+    if (d.statut === 'accepte') caAccepteHT += d.prix_ht ?? 0
   }
 
   return {
@@ -147,6 +185,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     devisEnvoyes:       env,
     devisAcceptes:      acc,
     devisRefuses:       ref,
+    devisEnCours,
     statutCounts,
     urgentesTotal:      urg,
     urgentesTraitees:   pctUrgTraitees,
@@ -156,6 +195,9 @@ export async function getDashboardData(): Promise<DashboardData> {
     relancesEnRetard:   relRet,
     relancesReponses:   relRep,
     tauxReponseRelances: tauxRep,
+    semaine,
+    caPotentielHT:      Math.round(caPotentielHT),
+    caAccepteHT:        Math.round(caAccepteHT),
     recentDemandes:     (recentRows ?? []) as RecentDemande[],
   }
 }

@@ -796,7 +796,7 @@ function SearchBar({ onSearch }: { onSearch: (msg: string) => void }) {
 // Destination Card
 // ─────────────────────────────────────────────────────────
 
-function DestCard({ dest, onBook }: { dest: typeof DESTINATIONS[0]; onBook: () => void }) {
+function DestCard({ dest, onBook }: { dest: typeof DESTINATIONS[0]; onBook: (d: typeof DESTINATIONS[0]) => void }) {
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-[0_2px_16px_rgba(0,0,0,0.07)] hover:shadow-[0_8px_36px_rgba(0,0,0,0.14)] transition-all duration-300 group hover:-translate-y-1 border border-[#f0f0f0]">
       {/* Image */}
@@ -842,7 +842,7 @@ function DestCard({ dest, onBook }: { dest: typeof DESTINATIONS[0]; onBook: () =
         </div>
 
         {/* CTA */}
-        <button onClick={onBook}
+        <button onClick={() => onBook(dest)}
           className="w-full bg-[#4caf50] hover:bg-[#43a047] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer text-[13px] shadow-sm hover:shadow-md">
           Découvrir et réserver <IconArrow />
         </button>
@@ -855,7 +855,7 @@ function DestCard({ dest, onBook }: { dest: typeof DESTINATIONS[0]; onBook: () =
 // Destinations Section
 // ─────────────────────────────────────────────────────────
 
-function DestinationsSection({ onBook }: { onBook: () => void }) {
+function DestinationsSection({ onBook }: { onBook: (d: typeof DESTINATIONS[0]) => void }) {
   const [filter, setFilter] = useState('Tous')
   const filtered = filter === 'Tous' ? DESTINATIONS : DESTINATIONS.filter(d => d.category === filter)
 
@@ -1091,7 +1091,12 @@ export default function HomePage() {
 
   const handleSearch = useCallback((msg: string) => {
     setChatOpen(true)
-    // Petit délai pour que le panel soit monté avant d'envoyer
+    setTimeout(() => chatState.sendPrefilled(msg), 80)
+  }, [chatState])
+
+  const handleDestBook = useCallback((dest: typeof DESTINATIONS[0]) => {
+    setChatOpen(true)
+    const msg = `Bonjour ! Je suis intéressé par un voyage de groupe à ${dest.name} (${dest.country}), durée indicative ${dest.duration}. Pouvez-vous me préparer un devis de transport ?`
     setTimeout(() => chatState.sendPrefilled(msg), 80)
   }, [chatState])
 
@@ -1100,7 +1105,7 @@ export default function HomePage() {
       <Navbar onChatOpen={openChat} />
       <Hero onChatOpen={openChat} />
       <SearchBar onSearch={handleSearch} />
-      <DestinationsSection onBook={openChat} />
+      <DestinationsSection onBook={handleDestBook} />
       <WhySection />
       <CTABanner onBook={openChat} />
       <Footer />
