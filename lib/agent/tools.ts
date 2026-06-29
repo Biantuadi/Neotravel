@@ -298,30 +298,39 @@ export const tools = (demandeRef: { current: string | undefined }) => ({
       })
 
       const reference = `NEO-${Date.now()}`
+      const sentAt = new Date().toISOString()
 
-      await envoyerEmailDevis({
-        prospect: {
-          nom:         params.nom_prospect,
-          email:       params.email,
-          depart:      params.depart,
-          destination: params.destination,
-          dateDepart:  params.dateDepart,
-        },
-        devis,
-        reference,
-        nbPassagers: params.nbPassagers,
-      })
+      // 1. Créer/mettre à jour le devis en DB d'abord pour obtenir l'UUID
+      let devisId: string | undefined
 
       if (did) {
-        const sentAt = new Date().toISOString()
-
-        // Vérifie si un devis brouillon existe déjà pour cette demande
         const { data: existing } = await supabaseAdmin
           .from('devis')
           .select('id')
           .eq('demande_id', did)
           .eq('statut', 'brouillon')
           .maybeSingle()
+
+        if (existing) {
+          await supabaseAdmin.from('devis').update({
+            statut: 'envoye',
+            envoye_le: sentAt,
+            updated_at: sentAt,
+          }).eq('id', existing.id)
+          devisId = existing.id
+        } else {
+          const { data: inserted } = await supabaseAdmin.from('devis').insert({
+            demande_id: did,
+            prix_ht:   devis.prixHT,
+            tva:       devis.tva,
+            prix_ttc:  devis.prixTTC,
+            devise:    devis.devise,
+            lignes:    devis.lignes,
+            statut:    'envoye',
+            envoye_le: sentAt,
+          }).select('id').single()
+          devisId = inserted?.id
+        }
 
         await Promise.all([
           supabaseAdmin.from('logs').insert({
@@ -333,26 +342,23 @@ export const tools = (demandeRef: { current: string | undefined }) => ({
             statut: 'devis_envoye',
             updated_at: sentAt,
           }).eq('id', did),
-          existing
-            // Met à jour le brouillon existant
-            ? supabaseAdmin.from('devis').update({
-                statut: 'envoye',
-                envoye_le: sentAt,
-                updated_at: sentAt,
-              }).eq('id', existing.id)
-            // Crée le devis directement en statut "envoye" s'il n'existait pas
-            : supabaseAdmin.from('devis').insert({
-                demande_id: did,
-                prix_ht:   devis.prixHT,
-                tva:       devis.tva,
-                prix_ttc:  devis.prixTTC,
-                devise:    devis.devise,
-                lignes:    devis.lignes,
-                statut:    'envoye',
-                envoye_le: sentAt,
-              }),
         ])
       }
+
+      // 2. Envoyer l'email avec le vrai UUID Supabase pour le lien d'acceptation
+      await envoyerEmailDevis({
+        prospect: {
+          nom:         params.nom_prospect,
+          email:       params.email,
+          depart:      params.depart,
+          destination: params.destination,
+          dateDepart:  params.dateDepart,
+        },
+        devis,
+        reference,
+        devisId,
+        nbPassagers: params.nbPassagers,
+      })
 
       return {
         success: true,

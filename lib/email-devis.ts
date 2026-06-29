@@ -8,6 +8,7 @@ export interface EnvoyerEmailDevisParams {
   prospect: CoordonneesProspect & { email: string }
   devis: Devis
   reference?: string
+  devisId?: string   // UUID Supabase pour le lien d'acceptation
   nbPassagers?: number
 }
 
@@ -19,6 +20,7 @@ export async function envoyerEmailDevis({
   prospect,
   devis,
   reference,
+  devisId,
   nbPassagers = 1,
 }: EnvoyerEmailDevisParams): Promise<{ id?: string }> {
   if (!process.env.RESEND_API_KEY) {
@@ -45,7 +47,9 @@ export async function envoyerEmailDevis({
     montantTTC: devis.prixTTC,
     devisId: reference ?? 'N/A',
     dateGeneration: today,
-    ctaUrl: buildAcceptUrl(reference ?? 'unknown', process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app'),
+    ctaUrl: devisId
+      ? buildAcceptUrl(devisId, process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app')
+      : (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app'),
   })
 
   const { data, error } = await resend.emails.send({
