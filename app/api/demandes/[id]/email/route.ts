@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase'
+import { emailGenerique, emailInfosManquantes } from '@/lib/email-templates'
 import { Resend } from 'resend'
 import { NextResponse } from 'next/server'
 
@@ -24,37 +25,45 @@ export async function POST(
   }
 
   if (!demande.email) {
-    return NextResponse.json({ error: 'Pas d\'email pour ce prospect' }, { status: 400 })
+    return NextResponse.json({ error: "Pas d'email pour ce prospect" }, { status: 400 })
   }
 
   const body = await _req.json().catch(() => ({}))
   const contenu: string | undefined = body.contenu
+  const template: string = body.template ?? 'generique'
 
-  if (!contenu?.trim()) {
+  if (!contenu?.trim() && template === 'generique') {
     return NextResponse.json({ error: 'Le contenu du message est requis.' }, { status: 400 })
   }
 
-  const nom = demande.nom_prospect ?? 'Prospect'
+  const prenom = (demande.nom_prospect ?? 'Prospect').split(' ')[0]
   const toEmail = isTestMode ? testRedirectTo : demande.email
   const subjectBase = body.subject?.trim() || 'Votre demande NeoTravel — Suivi de dossier'
 
-  const htmlContenu = contenu
-    .trim()
-    .split('\n')
-    .map((line: string) => line.trim() ? `<p style="margin:0 0 12px">${line}</p>` : '<br/>')
-    .join('')
+  let html: string
+
+  if (template === 'infos_manquantes') {
+    const dateDepart = demande.date_depart
+      ? new Date(demande.date_depart).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+      : 'à définir'
+    const champsManquants: string[] = body.champsManquants ?? []
+    html = emailInfosManquantes({
+      prenom,
+      depart: demande.depart ?? '—',
+      destination: demande.destination ?? '—',
+      dateDepart,
+      champsManquants: champsManquants.length > 0 ? champsManquants : ['Informations complémentaires requises'],
+      ctaUrl: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel.fr',
+    })
+  } else {
+    html = emailGenerique({ prenom, contenu: contenu ?? '' })
+  }
 
   const { error: sendError } = await resend.emails.send({
     from: fromEmail,
     to: toEmail,
     subject: isTestMode ? `[TEST → ${demande.email}] ${subjectBase}` : subjectBase,
-    html: `
-      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1e293b">
-        <p style="margin:0 0 12px">Bonjour ${nom},</p>
-        ${htmlContenu}
-        <p style="margin:24px 0 0;color:#64748b;font-size:13px">— L'équipe NeoTravel</p>
-      </div>
-    `,
+    html,
   })
 
   if (sendError) {

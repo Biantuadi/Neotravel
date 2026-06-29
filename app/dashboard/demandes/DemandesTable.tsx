@@ -121,18 +121,23 @@ function DemandeDrawer({
   const [showEmailComposer, setShowEmailComposer] = useState(false)
   const [emailSubject, setEmailSubject] = useState('Suivi de votre demande NeoTravel')
   const [emailContenu, setEmailContenu] = useState('')
+  const [emailTemplate, setEmailTemplate] = useState<'generique' | 'infos_manquantes'>('generique')
+  const [champsManquants, setChampsManquants] = useState<string[]>(['', '', ''])
   const cfg = STATUT_CONFIG[selectedStatut]
   const transitions = STATUT_TRANSITIONS[demande.statut]
   const changed = selectedStatut !== demande.statut || note !== (demande.note_commerciale ?? '')
 
   async function handleSendEmail() {
-    if (!emailContenu.trim()) { setEmailError('Le contenu du message est requis.'); return }
+    if (emailTemplate === 'generique' && !emailContenu.trim()) { setEmailError('Le contenu du message est requis.'); return }
     setSendingEmail(true); setEmailError('')
     try {
+      const payload: Record<string, unknown> = { subject: emailSubject, template: emailTemplate }
+      if (emailTemplate === 'generique') payload.contenu = emailContenu
+      if (emailTemplate === 'infos_manquantes') payload.champsManquants = champsManquants.filter(c => c.trim())
       const res = await fetch(`/api/demandes/${demande.id}/email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject: emailSubject, contenu: emailContenu }),
+        body: JSON.stringify(payload),
       })
       if (res.ok) {
         setEmailSent(true)
@@ -327,16 +332,53 @@ function DemandeDrawer({
                       />
                     </div>
 
-                    {/* Corps */}
-                    <textarea
-                      value={emailContenu}
-                      onChange={e => setEmailContenu(e.target.value)}
-                      placeholder={`Bonjour ${demande.nom_prospect.split(' ')[0]},\n\n`}
-                      rows={6}
-                      style={{ width: '100%', boxSizing: 'border-box', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#0f172a', resize: 'vertical', outline: 'none', fontFamily: 'inherit', lineHeight: 1.6 }}
-                      onFocus={e => { e.target.style.borderColor = '#2563eb' }}
-                      onBlur={e => { e.target.style.borderColor = '#e2e8f0' }}
-                    />
+                    {/* Sélecteur de template */}
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+                      <button
+                        onClick={() => setEmailTemplate('generique')}
+                        style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: '1.5px solid', borderColor: emailTemplate === 'generique' ? '#2563eb' : '#e2e8f0', background: emailTemplate === 'generique' ? '#eff6ff' : 'white', fontSize: 12, fontWeight: emailTemplate === 'generique' ? 600 : 400, color: emailTemplate === 'generique' ? '#2563eb' : '#64748b', cursor: 'pointer' }}
+                      >
+                        Message libre
+                      </button>
+                      <button
+                        onClick={() => setEmailTemplate('infos_manquantes')}
+                        style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: '1.5px solid', borderColor: emailTemplate === 'infos_manquantes' ? '#2563eb' : '#e2e8f0', background: emailTemplate === 'infos_manquantes' ? '#eff6ff' : 'white', fontSize: 12, fontWeight: emailTemplate === 'infos_manquantes' ? 600 : 400, color: emailTemplate === 'infos_manquantes' ? '#2563eb' : '#64748b', cursor: 'pointer' }}
+                      >
+                        Infos manquantes
+                      </button>
+                    </div>
+
+                    {/* Corps selon template */}
+                    {emailTemplate === 'generique' ? (
+                      <textarea
+                        value={emailContenu}
+                        onChange={e => setEmailContenu(e.target.value)}
+                        placeholder={`Bonjour ${demande.nom_prospect.split(' ')[0]},\n\n`}
+                        rows={6}
+                        style={{ width: '100%', boxSizing: 'border-box', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#0f172a', resize: 'vertical', outline: 'none', fontFamily: 'inherit', lineHeight: 1.6 }}
+                        onFocus={e => { e.target.style.borderColor = '#2563eb' }}
+                        onBlur={e => { e.target.style.borderColor = '#e2e8f0' }}
+                      />
+                    ) : (
+                      <div style={{ background: '#e5edfc', borderRadius: 8, padding: '12px 14px' }}>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', margin: '0 0 8px' }}>Champs manquants à renseigner :</p>
+                        {champsManquants.map((c, i) => (
+                          <input
+                            key={i}
+                            value={c}
+                            onChange={e => { const next = [...champsManquants]; next[i] = e.target.value; setChampsManquants(next) }}
+                            placeholder={`Ex : ${['Date de retour', 'Exigences particulières', 'Type de groupe'][i] ?? 'Champ ' + (i + 1)}`}
+                            style={{ display: 'block', width: '100%', boxSizing: 'border-box', background: 'white', border: '1.5px solid #bfdbfe', borderRadius: 6, padding: '7px 10px', fontSize: 12, color: '#0f172a', outline: 'none', fontFamily: 'inherit', marginBottom: i < champsManquants.length - 1 ? 6 : 0 }}
+                          />
+                        ))}
+                        <button
+                          onClick={() => setChampsManquants([...champsManquants, ''])}
+                          style={{ marginTop: 8, fontSize: 11, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                        >
+                          + Ajouter un champ
+                        </button>
+                      </div>
+                    )}
 
                     {emailError && <p style={{ fontSize: 12, color: '#dc2626', margin: 0 }}>{emailError}</p>}
 
@@ -350,8 +392,8 @@ function DemandeDrawer({
                       </button>
                       <button
                         onClick={handleSendEmail}
-                        disabled={sendingEmail || !emailContenu.trim()}
-                        style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: sendingEmail || !emailContenu.trim() ? '#93c5fd' : '#2563eb', fontSize: 13, fontWeight: 600, color: 'white', cursor: sendingEmail || !emailContenu.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                        disabled={sendingEmail || (emailTemplate === 'generique' && !emailContenu.trim())}
+                        style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: sendingEmail || (emailTemplate === 'generique' && !emailContenu.trim()) ? '#93c5fd' : '#2563eb', fontSize: 13, fontWeight: 600, color: 'white', cursor: sendingEmail || !emailContenu.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
                       >
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                         {sendingEmail ? 'Envoi...' : 'Envoyer'}
