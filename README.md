@@ -92,7 +92,7 @@ npm test
 Creer un fichier `.env.local` a la racine du projet :
 
 ```bash
-ANTHROPIC_API_KEY=
+AI_GATEWAY_API_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
@@ -102,9 +102,9 @@ RESEND_FROM_EMAIL="NeoTravel <onboarding@resend.dev>"
 
 Notes :
 
+- `AI_GATEWAY_API_KEY` — clé de la passerelle Vercel AI Gateway (route vers `anthropic/claude-sonnet-4-5`) ;
 - `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` alimentent le client public Supabase dans `lib/supabase.ts` ;
-- `SUPABASE_SERVICE_ROLE_KEY` est utilisee cote serveur par `supabaseAdmin` ;
-- `ANTHROPIC_API_KEY` sert au modele Anthropic appele par le Vercel AI SDK ;
+- `SUPABASE_SERVICE_ROLE_KEY` est utilisee cote serveur par `supabaseAdmin` (bypasse le RLS pour les écritures agent) ;
 - `RESEND_API_KEY` est obligatoire pour envoyer un devis par email ;
 - `RESEND_FROM_EMAIL` peut etre remplace par une adresse verifiee dans Resend.
 
@@ -137,21 +137,21 @@ Les politiques RLS sont activees et le backend utilise la cle `service_role` pou
 La route principale est :
 
 ```text
-POST /api/agent
+POST /api/chat
 ```
 
 Fichier :
 
 ```text
-app/api/agent/route.ts
+app/api/chat/route.ts
 ```
 
-Le prompt systeme est la constante `SYSTEM_PROMPT`.
+Le prompt systeme est la constante `SYSTEM_PROMPT` dans `lib/agent/prompt.ts`.
 
 Le modele configure actuellement est :
 
 ```ts
-anthropic('claude-sonnet-4-6')
+gateway('anthropic/claude-sonnet-4-5')
 ```
 
 Le runtime est force en Node.js avec :
@@ -161,6 +161,43 @@ export const runtime = 'nodejs'
 ```
 
 C'est necessaire pour l'envoi email et la generation PDF cote serveur.
+
+## Fiabilité, garde-fous et RGPD
+
+### Calcul déterministe — le LLM ne touche jamais aux prix
+
+Le LLM **ne calcule jamais un prix lui-même**. La règle est inscrite dans le prompt système (`lib/agent/prompt.ts`) : *"Tu ne calcules JAMAIS un prix toi-même. Uniquement calculer_devis()."* Toute la logique tarifaire est dans `lib/calculer-devis.ts` (fonction pure, testée par 13 tests Jest). Le LLM appelle le tool avec des paramètres structurés, reçoit le résultat et l'affiche — il ne peut pas négocier, inventer ou arrondir un montant.
+
+### Prompt injection — neutralisée par architecture
+
+L'agent ne peut pas être manipulé pour sortir un prix arbitraire car :
+- le calcul est **hors du contexte LLM** (code TypeScript côté serveur) ;
+- tous les paramètres des tools sont **validés par des schémas Zod** (`inputSchema`) avant exécution — une valeur invalide rejette l'appel ;
+- `stopWhen: isStepCount(10)` limite le nombre d'étapes pour éviter les boucles d'exploitation.
+
+### HITL — Human-in-the-Loop
+
+Deux situations déclenchent un transfert automatique à un commercial humain (tool `escalader_humain`) :
+1. **Plus de 80 passagers** — dépasse le barème automatique (`CAPACITE_MAX = 85` dans `calculer-devis.ts`) ;
+2. **Trajet hors zone** (> 1 500 km) — `DISTANCE_MAX_KM` dans le même fichier ;
+3. **Toute demande jugée complexe** par le LLM selon les instructions du prompt.
+
+Le dossier passe en statut `cas_complexe` dans Supabase avec un log horodaté. Le commercial voit l'alerte dans le dashboard.
+
+### Sorties structurées — Zod sur tous les tools
+
+Chaque tool de l'agent (`lib/agent/tools.ts`) déclare un `inputSchema` Zod complet. Le Vercel AI SDK valide les paramètres avant d'appeler `execute`. Aucun tool ne reçoit de données non-typées.
+
+### RGPD — minimisation et sécurité des données
+
+| Principe | Implémentation |
+|----------|---------------|
+| **Minimisation** | Seuls les champs nécessaires au devis sont collectés (nom, email optionnel, téléphone optionnel, trajet, date, passagers) |
+| **Pseudonymisation** | Les leads sans email sont stockés sans identifiant personnel obligatoire |
+| **Contrôle d'accès** | RLS (Row Level Security) activé sur toutes les tables Supabase — les lectures publiques sont interdites |
+| **Clé service** | `supabaseAdmin` (clé `service_role`) utilisée uniquement côté serveur dans les Server Actions et API routes — jamais exposée au client |
+| **Pas de stockage LLM** | Les conversations ne sont pas persistées dans la base — seules les données métier issues des tools sont sauvegardées |
+| **Emails** | Envoyés via Resend depuis un domaine vérifié — aucune adresse email n'est partagée avec des tiers |
 
 ## Tools de l'agent
 
@@ -455,6 +492,8 @@ Ajouter les variables d'environnement dans **Supabase > Edge Functions > relance
 ## Ressources
 
 - **Figma** : [NeoTravel — Maquette Site Web](https://www.figma.com/design/gpKMpdgnx2Vkh3eeqypJAN/NEOTRAVEL-%E2%80%94-Maquette-Site-Web--copie-?node-id=0-1&p=f&t=1MI9omxJKytwja2W-0)
+- **Journal de décisions** : [`docs/journal-decisions.md`](docs/journal-decisions.md) — 6 choix techniques clés (Vercel AI SDK, Supabase, calcul déterministe, pdf-lib, Resend, streaming DEMANDE_ID) + rétrospective
+- **Procédure équipes** : [`docs/procedure-equipes.md`](docs/procedure-equipes.md) — guide utilisateur pour les équipes commerciales
 
 ## Équipe
 
