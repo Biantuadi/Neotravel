@@ -105,6 +105,10 @@ La fonction `calculer_devis()` est **déterministe et ne doit jamais être appel
 2. Ajouter les variables d'environnement dans Settings > Environment Variables
 3. Déployer — chaque push sur `main` déclenche un déploiement automatique
 
+## Ressources
+
+- **Figma** : [NeoTravel — Maquette Site Web](https://www.figma.com/design/gpKMpdgnx2Vkh3eeqypJAN/NEOTRAVEL-%E2%80%94-Maquette-Site-Web--copie-?node-id=0-1&p=f&t=1MI9omxJKytwja2W-0)
+
 ## Équipe
 
 | Membre | Rôle |
