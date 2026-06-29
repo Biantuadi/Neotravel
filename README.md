@@ -25,7 +25,8 @@ Prospect (chat) → Agent IA (Vercel AI SDK) → calculer_devis() → PDF (pdf-l
 ```
 neotravel/
 ├── app/
-│   ├── api/agent/          # Route POST de l'agent IA (streaming)
+│   ├── api/chat/           # Route POST de l'agent IA (streaming texte + tools)
+│   ├── api/agent/          # Route alternative UIMessage (non utilisée en prod)
 │   ├── dashboard/          # Dashboard direction (KPIs Supabase temps réel)
 │   └── page.tsx            # Landing conversationnelle (chat prospect)
 ├── lib/
@@ -44,6 +45,11 @@ neotravel/
 ├── docs/
 │   ├── procedure-equipes.html  # Guide utilisateur équipes commerciales
 │   └── procedure-equipes.md
+├── supabase/
+│   └── functions/
+│       └── relancer-prospect/  # Edge Function cron (relances J+2 / J+5 / J+7)
+│           ├── index.ts
+│           └── cron-setup.sql  # Script pg_cron à exécuter dans Supabase SQL Editor
 ├── neotravel_migration.sql # Schéma BDD complet — à exécuter dans Supabase SQL Editor
 └── __tests__/
     └── calculer-devis.test.ts  # 12 tests Jest sur la fonction de pricing
@@ -68,22 +74,20 @@ npm install
 Créer un fichier `.env.local` à la racine (**ne jamais committer ce fichier**) :
 
 ```env
-ANTHROPIC_API_KEY=sk-ant-...
+AI_GATEWAY_API_KEY=vck_...
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 RESEND_API_KEY=re_...
-RESEND_FROM_EMAIL=NeoTravel <contact@votredomaine.com>
 ```
 
 | Variable | Description | Où la trouver |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Clé API Anthropic pour l'agent IA | anthropic.com > API Keys |
+| `AI_GATEWAY_API_KEY` | Clé Vercel AI Gateway (accès au modèle Claude) | Vercel Dashboard > AI > Gateway |
 | `NEXT_PUBLIC_SUPABASE_URL` | URL du projet Supabase | Supabase > Settings > API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clé publique Supabase (lecture seule) | Supabase > Settings > API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Clé service Supabase (contourne le RLS) | Supabase > Settings > API |
 | `RESEND_API_KEY` | Clé API pour l'envoi d'emails | resend.com — free tier : 3 000 emails/mois |
-| `RESEND_FROM_EMAIL` | Expéditeur affiché dans les emails | Doit correspondre à un domaine vérifié dans Resend |
 
 ### 3. Initialiser la base de données
 
@@ -206,6 +210,32 @@ npx vercel --prod
 ```
 
 Les variables d'environnement sont à renseigner dans Vercel > Settings > Environment Variables (les mêmes que `.env.local`).
+
+## Edge Functions — Relances automatiques
+
+La fonction `supabase/functions/relancer-prospect/` gère les relances prospects en 3 étapes :
+
+| Étape | Déclencheur | Action |
+|-------|-------------|--------|
+| Relance 1 | J+2 après `devis_envoye` | Email de suivi + statut → `relance_1` |
+| Relance 2 | J+3 après `relance_1` (= J+5) | Email de dernière relance + statut → `relance_2` |
+| Clôture | J+2 après `relance_2` (= J+7) | Statut → `cloture`, aucun email |
+
+### Déploiement de la Edge Function
+
+```bash
+npx supabase functions deploy relancer-prospect --project-ref <PROJECT_REF>
+```
+
+Ajouter les variables d'environnement dans **Supabase > Edge Functions > relancer-prospect > Secrets** :
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL` *(optionnel — défaut : `onboarding@resend.dev`)*
+
+### Activation du cron quotidien
+
+1. Dans Supabase > **Database > Extensions**, activer `pg_cron` et `pg_net`
+2. Dans **SQL Editor**, remplacer `<PROJECT_REF>` dans `supabase/functions/relancer-prospect/cron-setup.sql` et exécuter le script
+3. Le cron se déclenche chaque jour à **08h00 UTC**
 
 ## Ressources
 
