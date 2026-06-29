@@ -69,6 +69,7 @@ create table demandes (
   score_completude    integer default 0 check (score_completude between 0 and 100),
   budget_estime       numeric(10,2),
   commentaire_client  text,
+  note_commerciale    text,
   date_creation       timestamptz not null default now(),
   updated_at          timestamptz not null default now()
 );

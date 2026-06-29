@@ -59,7 +59,7 @@ async function getDemandesData() {
 
     // Liste complète pour la table
     supabaseAdmin.from('demandes')
-      .select('id,nom_prospect,depart,destination,date_depart,nb_passagers,urgence,statut,date_creation')
+      .select('id,nom_prospect,email,telephone,depart,destination,date_depart,nb_passagers,urgence,statut,date_creation,note_commerciale')
       .order('date_creation', { ascending: false })
       .limit(200),
   ])
