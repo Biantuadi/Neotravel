@@ -2,7 +2,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 // ── Constantes non issues de la BD ───────────────────────
 const PRIX_MINIMUM   = 350    // € plancher / trajet
-const DISTANCE_MAX_KM = 1500  // au-delà = hors zone
 const TVA            = 0.10
 const MARGE          = 0.15
 const PRIX_GUIDE_JOUR      = 80
@@ -97,8 +96,6 @@ export async function calculerDevis(p: ParamsDevis): Promise<Devis> {
     throw new Error(`Capacité hors barème (max ${CAPACITE_MAX} passagers) — à transmettre à un commercial.`)
   if (!Number.isFinite(p.distanceKm) || p.distanceKm <= 0)
     throw new Error('Distance invalide (doit être > 0).')
-  if (p.distanceKm > DISTANCE_MAX_KM)
-    throw new Error('Trajet hors zone desservie — à transmettre à un commercial.')
 
   const dDemande = new Date(p.dateDemande)
   const dDepart  = new Date(p.dateDepart)

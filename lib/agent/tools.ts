@@ -5,13 +5,17 @@ import type { ParamsDevis } from '@/lib/calculer-devis'
 import { supabaseAdmin } from '@/lib/supabase'
 import { envoyerEmailDevis } from '@/lib/email-devis'
 
-async function geocodeVille(ville: string, apiKey: string): Promise<[number, number] | null> {
+async function geocodeVille(ville: string, apiKey: string): Promise<{ coords: [number, number]; country: string } | null> {
   const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(ville)}&size=1&layers=locality,county,region`
   const res = await fetch(url)
   if (!res.ok) return null
   const data = await res.json()
   if (!data.features?.length) return null
-  return data.features[0].geometry.coordinates as [number, number] // [lng, lat]
+  const f = data.features[0]
+  return {
+    coords:  f.geometry.coordinates as [number, number],
+    country: (f.properties.country_code ?? 'unknown').toLowerCase(),
+  }
 }
 
 export const tools = (demande_id?: string) => ({
@@ -28,13 +32,15 @@ export const tools = (demande_id?: string) => ({
       }
 
       try {
-        const [coordsDepart, coordsDest] = await Promise.all([
+        const [geoDepart, geoDest] = await Promise.all([
           geocodeVille(depart, apiKey),
           geocodeVille(destination, apiKey),
         ])
 
-        if (!coordsDepart) return { success: false, error: `Ville de départ introuvable : ${depart}` }
-        if (!coordsDest)  return { success: false, error: `Ville de destination introuvable : ${destination}` }
+        if (!geoDepart) return { success: false, error: `Ville de départ introuvable : ${depart}` }
+        if (!geoDest)   return { success: false, error: `Ville de destination introuvable : ${destination}` }
+
+        const international = geoDepart.country !== 'fr' || geoDest.country !== 'fr'
 
         const res = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
           method: 'POST',
@@ -43,16 +49,26 @@ export const tools = (demande_id?: string) => ({
             'Content-Type': 'application/json',
             Accept: 'application/json',
           },
-          body: JSON.stringify({ coordinates: [coordsDepart, coordsDest] }),
+          body: JSON.stringify({ coordinates: [geoDepart.coords, geoDest.coords] }),
         })
 
-        if (!res.ok) throw new Error(`ORS ${res.status}`)
+        if (!res.ok) {
+          // ORS retourne 400/500 quand aucune route terrestre n'existe (île, DOM-TOM, etc.)
+          const errData = await res.json().catch(() => null)
+          const orsCode = errData?.error?.code
+          // codes 2009/2010/2099 = pas d'itinéraire routier possible
+          const routeImpossible = [2009, 2010, 2099].includes(orsCode) || res.status === 404
+          if (routeImpossible) {
+            return { success: false, routeImpossible: true }
+          }
+          throw new Error(`ORS ${res.status}`)
+        }
 
         const data = await res.json()
         const distanceKm = Math.round(data.routes[0].summary.distance / 1000)
         const dureeMin   = Math.round(data.routes[0].summary.duration  / 60)
 
-        return { success: true, distanceKm, dureeMin }
+        return { success: true, distanceKm, dureeMin, international }
       } catch (e) {
         return { success: false, error: String(e) }
       }
@@ -63,7 +79,7 @@ export const tools = (demande_id?: string) => ({
     description: 'Calcule le prix d\'un devis de transport de groupe de manière déterministe. Appeler uniquement quand toutes les infos sont collectées.',
     inputSchema: z.object({
       nbPassagers:   z.number().int().min(1).max(59).describe('Nombre de passagers'),
-      distanceKm:   z.number().positive().max(1500).describe('Distance en kilomètres'),
+      distanceKm:   z.number().positive().describe('Distance en kilomètres'),
       dateDemande:  z.string().describe('Date de la demande au format YYYY-MM-DD'),
       dateDepart:   z.string().describe('Date de départ au format YYYY-MM-DD'),
       typeVehicule: z.string().optional(),
@@ -212,7 +228,7 @@ export const tools = (demande_id?: string) => ({
       destination:  z.string().optional().describe('Ville de destination'),
       // Paramètres du devis — pour recalculer et générer le PDF
       nbPassagers:  z.number().int().min(1).max(59),
-      distanceKm:   z.number().positive().max(1500),
+      distanceKm:   z.number().positive(),
       dateDemande:  z.string().describe('Date de la demande YYYY-MM-DD'),
       dateDepart:   z.string().describe('Date de départ YYYY-MM-DD'),
       options: z.object({
