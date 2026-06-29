@@ -74,6 +74,7 @@ RESEND_API_KEY=re_...
 ### 3. Lancer en développement
 
 ```bash
+npm install
 npm run dev
 ```
 

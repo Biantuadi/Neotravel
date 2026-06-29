@@ -3,6 +3,7 @@ import { SYSTEM_PROMPT } from '@/lib/agent/prompt'
 import { tools } from '@/lib/agent/tools'
 
 export const maxDuration = 60
+export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   const { messages, demande_id }: { messages: UIMessage[]; demande_id?: string } = await req.json()
