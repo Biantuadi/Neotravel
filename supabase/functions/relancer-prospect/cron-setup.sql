@@ -9,7 +9,7 @@ select cron.schedule(
   '0 8 * * *',                            -- cron : tous les jours à 08:00 UTC
   $$
   select net.http_post(
-    url     := 'https://<PROJECT_REF>.supabase.co/functions/v1/relancer-prospect',
+    url     := 'https://bfqkuwbtqqyisjzrjqep.supabase.co/functions/v1/relancer-prospect',
     headers := jsonb_build_object(
       'Content-Type',  'application/json',
       'Authorization', 'Bearer ' || current_setting('app.service_role_key')

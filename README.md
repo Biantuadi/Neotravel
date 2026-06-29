@@ -224,7 +224,7 @@ La fonction `supabase/functions/relancer-prospect/` gère les relances prospects
 ### Déploiement de la Edge Function
 
 ```bash
-npx supabase functions deploy relancer-prospect --project-ref <PROJECT_REF>
+npx supabase functions deploy relancer-prospect --project-ref bfqkuwbtqqyisjzrjqep
 ```
 
 Ajouter les variables d'environnement dans **Supabase > Edge Functions > relancer-prospect > Secrets** :
