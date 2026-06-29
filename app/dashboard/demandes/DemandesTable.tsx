@@ -82,9 +82,29 @@ function DemandeDrawer({
   onStatutChange: (id: string, statut: Statut, note?: string) => void
 }) {
   const [saving, setSaving] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+  const [emailError, setEmailError] = useState('')
   const [note, setNote] = useState(demande.note_commerciale ?? '')
   const [selectedStatut, setSelectedStatut] = useState<Statut>(demande.statut)
   const [saved, setSaved] = useState(false)
+
+  async function handleSendEmail() {
+    setSendingEmail(true)
+    setEmailError('')
+    try {
+      const res = await fetch(`/api/demandes/${demande.id}/email`, { method: 'POST' })
+      if (res.ok) {
+        setEmailSent(true)
+        setTimeout(() => setEmailSent(false), 3000)
+      } else {
+        const body = await res.json()
+        setEmailError(body.error ?? 'Erreur envoi')
+      }
+    } finally {
+      setSendingEmail(false)
+    }
+  }
 
   const transitions = STATUT_TRANSITIONS[demande.statut]
 
@@ -191,12 +211,17 @@ function DemandeDrawer({
           <Section title="Actions rapides">
             <div className="flex flex-col gap-2 mt-1">
               {demande.email && (
-                <a
-                  href={`mailto:${demande.email}?subject=Votre demande NeoTravel&body=Bonjour ${demande.nom_prospect},%0A%0A`}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-[8px] bg-[#f5f7fa] text-[12px] text-[#12151a] hover:bg-[#e8eaed] transition-colors"
+                <button
+                  onClick={handleSendEmail}
+                  disabled={sendingEmail}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-[8px] bg-[#f5f7fa] text-[12px] text-[#12151a] hover:bg-[#e8eaed] transition-colors disabled:opacity-50 w-full text-left"
                 >
-                  <span>✉</span> Envoyer un email
-                </a>
+                  <span>✉</span>
+                  {sendingEmail ? 'Envoi...' : emailSent ? '✓ Email envoyé' : 'Envoyer un email de suivi'}
+                </button>
+              )}
+              {emailError && (
+                <p className="text-[11px] text-[#e53935] px-1">{emailError}</p>
               )}
               {demande.telephone && (
                 <a
