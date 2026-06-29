@@ -65,7 +65,7 @@ async function getDevisData() {
     supabaseAdmin.from('devis')
       .select(`
         id, prix_ttc, envoye_le, statut, pdf_url, created_at,
-        demande:demande_id ( nom_prospect, depart, destination )
+        demandes:demande_id ( nom_prospect, depart, destination )
       `)
       .order('created_at', { ascending: false })
       .limit(200),
@@ -86,7 +86,10 @@ async function getDevisData() {
     tauxConversion,
     montantTotal,
     panierMoyen,
-    devis: (devis ?? []) as unknown as DevisRow[],
+    devis: (devis ?? []).map((d: Record<string, unknown>) => ({
+      ...d,
+      demande: d.demandes ?? null,
+    })) as unknown as DevisRow[],
   }
 }
 
