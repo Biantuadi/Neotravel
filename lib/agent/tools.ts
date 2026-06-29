@@ -137,6 +137,11 @@ export const tools = (demandeRef: { current: string | undefined }) => ({
       commentaire_client: z.string().optional(),
     }),
     execute: async (params) => {
+      // Garde-fou : refuser l'enregistrement sans trajet minimum
+      if (!params.depart || !params.destination) {
+        return { success: false, error: 'Enregistrement refusé : départ et destination requis avant de créer un lead.' }
+      }
+
       const champs = ['nom_prospect', 'email', 'telephone', 'nb_passagers', 'depart', 'destination', 'date_depart']
       const score = Math.round(champs.filter(c => params[c as keyof typeof params] != null).length / champs.length * 100)
       const now = new Date().toISOString()
@@ -252,6 +257,21 @@ export const tools = (demandeRef: { current: string | undefined }) => ({
       }).optional(),
     }),
     execute: async (params) => {
+      const did = demandeRef.current
+
+      // Idempotence : ne pas envoyer 2 fois pour la même demande
+      if (did) {
+        const { data: alreadySent } = await supabaseAdmin
+          .from('devis')
+          .select('id')
+          .eq('demande_id', did)
+          .eq('statut', 'envoye')
+          .maybeSingle()
+        if (alreadySent) {
+          return { success: true, reference: 'déjà envoyé', message: 'Le devis a déjà été envoyé par email.' }
+        }
+      }
+
       const devis = await calculerDevis({
         nbPassagers: params.nbPassagers,
         distanceKm:  params.distanceKm,
@@ -274,9 +294,17 @@ export const tools = (demandeRef: { current: string | undefined }) => ({
         reference,
       })
 
-      const did = demandeRef.current
       if (did) {
         const sentAt = new Date().toISOString()
+
+        // Vérifie si un devis brouillon existe déjà pour cette demande
+        const { data: existing } = await supabaseAdmin
+          .from('devis')
+          .select('id')
+          .eq('demande_id', did)
+          .eq('statut', 'brouillon')
+          .maybeSingle()
+
         await Promise.all([
           supabaseAdmin.from('logs').insert({
             demande_id: did,
@@ -287,11 +315,24 @@ export const tools = (demandeRef: { current: string | undefined }) => ({
             statut: 'devis_envoye',
             updated_at: sentAt,
           }).eq('id', did),
-          supabaseAdmin.from('devis').update({
-            statut: 'envoye',
-            envoye_le: sentAt,
-            updated_at: sentAt,
-          }).eq('demande_id', did).eq('statut', 'brouillon'),
+          existing
+            // Met à jour le brouillon existant
+            ? supabaseAdmin.from('devis').update({
+                statut: 'envoye',
+                envoye_le: sentAt,
+                updated_at: sentAt,
+              }).eq('id', existing.id)
+            // Crée le devis directement en statut "envoye" s'il n'existait pas
+            : supabaseAdmin.from('devis').insert({
+                demande_id: did,
+                prix_ht:   devis.prixHT,
+                tva:       devis.tva,
+                prix_ttc:  devis.prixTTC,
+                devise:    devis.devise,
+                lignes:    devis.lignes,
+                statut:    'envoye',
+                envoye_le: sentAt,
+              }),
         ])
       }
 
