@@ -295,6 +295,7 @@ export const tools = (demandeRef: { current: string | undefined }) => ({
         },
         devis,
         reference,
+        nbPassagers: params.nbPassagers,
       })
 
       if (did) {
