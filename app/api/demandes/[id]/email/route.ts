@@ -27,32 +27,33 @@ export async function POST(
     return NextResponse.json({ error: 'Pas d\'email pour ce prospect' }, { status: 400 })
   }
 
-  const nom = demande.nom_prospect ?? 'Prospect'
-  const trajet = demande.depart && demande.destination
-    ? `${demande.depart} → ${demande.destination}`
-    : 'trajet en cours de définition'
-  const date = demande.date_depart
-    ? new Date(demande.date_depart).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
-    : 'à définir'
+  const body = await _req.json().catch(() => ({}))
+  const contenu: string | undefined = body.contenu
 
+  if (!contenu?.trim()) {
+    return NextResponse.json({ error: 'Le contenu du message est requis.' }, { status: 400 })
+  }
+
+  const nom = demande.nom_prospect ?? 'Prospect'
   const toEmail = isTestMode ? testRedirectTo : demande.email
+  const subjectBase = body.subject?.trim() || 'Votre demande NeoTravel — Suivi de dossier'
+
+  const htmlContenu = contenu
+    .trim()
+    .split('\n')
+    .map((line: string) => line.trim() ? `<p style="margin:0 0 12px">${line}</p>` : '<br/>')
+    .join('')
 
   const { error: sendError } = await resend.emails.send({
     from: fromEmail,
     to: toEmail,
-    subject: isTestMode
-      ? `[TEST → ${demande.email}] Votre demande NeoTravel — Suivi de dossier`
-      : 'Votre demande NeoTravel — Suivi de dossier',
+    subject: isTestMode ? `[TEST → ${demande.email}] ${subjectBase}` : subjectBase,
     html: `
-      <p>Bonjour ${nom},</p>
-      <p>Notre équipe commerciale a bien pris en charge votre demande de transport de groupe :</p>
-      <ul>
-        <li><strong>Trajet :</strong> ${trajet}</li>
-        <li><strong>Date :</strong> ${date}</li>
-        <li><strong>Passagers :</strong> ${demande.nb_passagers ?? '—'}</li>
-      </ul>
-      <p>Un conseiller vous contactera prochainement pour finaliser votre devis.</p>
-      <p>Bien cordialement,<br />L'équipe NeoTravel</p>
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1e293b">
+        <p style="margin:0 0 12px">Bonjour ${nom},</p>
+        ${htmlContenu}
+        <p style="margin:24px 0 0;color:#64748b;font-size:13px">— L'équipe NeoTravel</p>
+      </div>
     `,
   })
 

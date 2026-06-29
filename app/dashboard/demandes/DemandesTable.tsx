@@ -118,16 +118,28 @@ function DemandeDrawer({
   const [note, setNote] = useState(demande.note_commerciale ?? '')
   const [selectedStatut, setSelectedStatut] = useState<Statut>(demande.statut)
   const [saved, setSaved] = useState(false)
+  const [showEmailComposer, setShowEmailComposer] = useState(false)
+  const [emailSubject, setEmailSubject] = useState('Suivi de votre demande NeoTravel')
+  const [emailContenu, setEmailContenu] = useState('')
   const cfg = STATUT_CONFIG[selectedStatut]
   const transitions = STATUT_TRANSITIONS[demande.statut]
   const changed = selectedStatut !== demande.statut || note !== (demande.note_commerciale ?? '')
 
   async function handleSendEmail() {
+    if (!emailContenu.trim()) { setEmailError('Le contenu du message est requis.'); return }
     setSendingEmail(true); setEmailError('')
     try {
-      const res = await fetch(`/api/demandes/${demande.id}/email`, { method: 'POST' })
-      if (res.ok) { setEmailSent(true); setTimeout(() => setEmailSent(false), 3000) }
-      else { const b = await res.json(); setEmailError(b.error ?? 'Erreur envoi') }
+      const res = await fetch(`/api/demandes/${demande.id}/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject: emailSubject, contenu: emailContenu }),
+      })
+      if (res.ok) {
+        setEmailSent(true)
+        setShowEmailComposer(false)
+        setEmailContenu('')
+        setTimeout(() => setEmailSent(false), 4000)
+      } else { const b = await res.json(); setEmailError(b.error ?? 'Erreur envoi') }
     } finally { setSendingEmail(false) }
   }
 
@@ -270,20 +282,85 @@ function DemandeDrawer({
           <div>
             <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Actions rapides</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {demande.email && (
+              {demande.email && !showEmailComposer && (
                 <button
-                  onClick={handleSendEmail}
-                  disabled={sendingEmail}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: emailSent ? '#f0fdf4' : 'white', cursor: 'pointer', fontSize: 13, color: emailSent ? '#16a34a' : '#0f172a', transition: 'all 0.15s', opacity: sendingEmail ? 0.6 : 1 }}
+                  onClick={() => { setShowEmailComposer(true); setEmailError('') }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: emailSent ? '#f0fdf4' : 'white', cursor: 'pointer', fontSize: 13, color: emailSent ? '#16a34a' : '#0f172a', transition: 'all 0.15s' }}
                 >
                   {emailSent
                     ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                     : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                   }
-                  {sendingEmail ? 'Envoi en cours...' : emailSent ? 'Email envoyé !' : 'Envoyer un email de suivi'}
+                  {emailSent ? 'Email envoyé !' : 'Envoyer un email de suivi'}
                 </button>
               )}
-              {emailError && <p style={{ fontSize: 12, color: '#dc2626', margin: '2px 0 0 4px' }}>{emailError}</p>}
+
+              {/* Composeur email */}
+              {demande.email && showEmailComposer && (
+                <div style={{ border: '1.5px solid #bfdbfe', borderRadius: 12, background: '#f8faff', overflow: 'hidden' }}>
+                  {/* Header composeur */}
+                  <div style={{ padding: '10px 14px', background: '#eff6ff', borderBottom: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#2563eb' }}>Nouveau message</span>
+                    </div>
+                    <button onClick={() => { setShowEmailComposer(false); setEmailError('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 2, lineHeight: 1 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+
+                  <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {/* À */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }}>
+                      <span style={{ fontSize: 12, color: '#94a3b8', width: 24, flexShrink: 0 }}>À :</span>
+                      <span style={{ fontSize: 13, color: '#475569', fontWeight: 500 }}>{demande.email}</span>
+                    </div>
+
+                    {/* Objet */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }}>
+                      <span style={{ fontSize: 12, color: '#94a3b8', width: 24, flexShrink: 0 }}>Objet :</span>
+                      <input
+                        value={emailSubject}
+                        onChange={e => setEmailSubject(e.target.value)}
+                        style={{ flex: 1, fontSize: 13, color: '#0f172a', border: 'none', background: 'transparent', outline: 'none', fontFamily: 'inherit' }}
+                        placeholder="Objet du message..."
+                      />
+                    </div>
+
+                    {/* Corps */}
+                    <textarea
+                      value={emailContenu}
+                      onChange={e => setEmailContenu(e.target.value)}
+                      placeholder={`Bonjour ${demande.nom_prospect.split(' ')[0]},\n\n`}
+                      rows={6}
+                      style={{ width: '100%', boxSizing: 'border-box', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#0f172a', resize: 'vertical', outline: 'none', fontFamily: 'inherit', lineHeight: 1.6 }}
+                      onFocus={e => { e.target.style.borderColor = '#2563eb' }}
+                      onBlur={e => { e.target.style.borderColor = '#e2e8f0' }}
+                    />
+
+                    {emailError && <p style={{ fontSize: 12, color: '#dc2626', margin: 0 }}>{emailError}</p>}
+
+                    {/* Boutons */}
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => { setShowEmailComposer(false); setEmailError('') }}
+                        style={{ padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: 'white', fontSize: 13, color: '#64748b', cursor: 'pointer' }}
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        onClick={handleSendEmail}
+                        disabled={sendingEmail || !emailContenu.trim()}
+                        style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: sendingEmail || !emailContenu.trim() ? '#93c5fd' : '#2563eb', fontSize: 13, fontWeight: 600, color: 'white', cursor: sendingEmail || !emailContenu.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        {sendingEmail ? 'Envoi...' : 'Envoyer'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {!showEmailComposer && emailError && <p style={{ fontSize: 12, color: '#dc2626', margin: '2px 0 0 4px' }}>{emailError}</p>}
               {demande.telephone && (
                 <a href={`tel:${demande.telephone}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: 'white', fontSize: 13, color: '#0f172a', textDecoration: 'none' }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .09h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
