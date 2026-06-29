@@ -14,12 +14,12 @@ const NAV = [
 
 function Logo() {
   return (
-    <div className="flex items-center gap-3">
+    <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
       <span className="w-7 h-7 rounded-full bg-[#4caf50] flex items-center justify-center shrink-0">
         <span className="w-3 h-3 rounded-full bg-white/70" />
       </span>
       <span className="text-white font-bold text-[15px] tracking-tight">Neotravel</span>
-    </div>
+    </Link>
   )
 }
 
@@ -78,13 +78,11 @@ export default function Sidebar() {
         {/* Header */}
         <div className="flex items-center justify-between px-6 mb-8">
           <Logo />
-          <a href="/">
           <button onClick={() => setOpen(false)} className="lg:hidden text-white/40 hover:text-white cursor-pointer">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M18 6 6 18M6 6l12 12"/>
             </svg>
           </button>
-          </a>
         </div>
 
         <p className="text-[9px] font-semibold text-white/30 px-6 mb-2 tracking-widest uppercase">Pilotage</p>
