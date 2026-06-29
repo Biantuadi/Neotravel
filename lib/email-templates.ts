@@ -8,7 +8,7 @@ export interface InfosManquantesData {
 }
 
 export function emailInfosManquantes(data: InfosManquantesData): string {
-  const { prenom, depart, destination, dateDepart, champsManquants, ctaUrl = 'https://neotravel.fr' } = data
+  const { prenom, depart, destination, dateDepart, champsManquants, ctaUrl = 'https://neotravel-six.vercel.app' } = data
 
   const champsHtml = champsManquants
     .map(c => `<tr><td style="padding:2px 0;font-size:12px;color:#1a2138;line-height:20px;">→ ${c}</td></tr>`)
@@ -155,7 +155,7 @@ export function emailDevis(data: EmailDevisData): string {
   const {
     prenom, depart, destination, dateDepart, dateRetour,
     nbPassagers, typeVehicule, montantTTC, devisId, dateGeneration,
-    ctaUrl = 'https://neotravel.fr',
+    ctaUrl = 'https://neotravel-six.vercel.app',
   } = data
 
   const montantFormate = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(montantTTC)

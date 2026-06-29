@@ -17,7 +17,7 @@ export default function DevisInvalidePage() {
           Ce lien ne fonctionne pas. Il a peut-être déjà été utilisé ou est incorrect. Contactez-nous si vous avez besoin d&apos;aide.
         </p>
 
-        <a href="https://neotravel.fr" style={{ display: 'inline-block', background: '#1a2138', color: 'white', borderRadius: 28, padding: '12px 24px', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+        <a href="https://neotravel-six.vercel.app" style={{ display: 'inline-block', background: '#1a2138', color: 'white', borderRadius: 28, padding: '12px 24px', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
           Retour au site →
         </a>
       </div>

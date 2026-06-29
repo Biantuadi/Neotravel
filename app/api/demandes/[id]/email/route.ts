@@ -53,7 +53,7 @@ export async function POST(
       destination: demande.destination ?? '—',
       dateDepart,
       champsManquants: champsManquants.length > 0 ? champsManquants : ['Informations complémentaires requises'],
-      ctaUrl: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel.fr',
+      ctaUrl: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app',
     })
   } else {
     html = emailGenerique({ prenom, contenu: contenu ?? '' })

@@ -45,7 +45,7 @@ export async function envoyerEmailDevis({
     montantTTC: devis.prixTTC,
     devisId: reference ?? 'N/A',
     dateGeneration: today,
-    ctaUrl: buildAcceptUrl(reference ?? 'unknown', process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel.fr'),
+    ctaUrl: buildAcceptUrl(reference ?? 'unknown', process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app'),
   })
 
   const { data, error } = await resend.emails.send({

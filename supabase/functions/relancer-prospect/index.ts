@@ -4,7 +4,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
 const FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') ?? 'NeoTravel <onboarding@resend.dev>'
-const SITE_URL = Deno.env.get('NEXT_PUBLIC_SITE_URL') ?? 'https://neotravel.fr'
+const SITE_URL = Deno.env.get('NEXT_PUBLIC_SITE_URL') ?? 'https://neotravel-six.vercel.app'
 const PHONE = Deno.env.get('NEOTRAVEL_PHONE') ?? '01 23 45 67 89'
 const DEVIS_TOKEN_SECRET = Deno.env.get('DEVIS_TOKEN_SECRET') ?? 'neotravel-devis-secret-change-me'
 

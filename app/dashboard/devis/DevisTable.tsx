@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 
 const PAGE_SIZE = 15
 
@@ -116,12 +117,57 @@ function Pagination({ page, total, pageSize, onChange }: { page: number; total: 
   )
 }
 
+// Transitions autorisées par statut courant
+const TRANSITIONS: Record<StatutDevis, StatutDevis[]> = {
+  brouillon: ['envoye'],
+  envoye:    ['accepte', 'refuse'],
+  accepte:   [],
+  refuse:    ['envoye'],
+  expire:    ['envoye', 'refuse'],
+}
+
+const TRANSITION_LABEL: Record<StatutDevis, string> = {
+  brouillon: 'Marquer envoyé',
+  envoye:    'Marquer envoyé',
+  accepte:   'Signé ✓',
+  refuse:    'Marquer refusé',
+  expire:    'Marquer expiré',
+}
+
+const TRANSITION_COLOR: Record<StatutDevis, string> = {
+  brouillon: '#2563eb',
+  envoye:    '#2563eb',
+  accepte:   '#16a34a',
+  refuse:    '#dc2626',
+  expire:    '#9ca3af',
+}
+
 // ── Drawer détail devis ───────────────────────────────────
 
-function DevisDrawer({ devis, onClose }: { devis: DevisRow; onClose: () => void }) {
+function DevisDrawer({ devis: initialDevis, onClose, onStatutChange }: { devis: DevisRow; onClose: () => void; onStatutChange: (id: string, s: StatutDevis) => void }) {
+  const [devis, setDevis] = useState(initialDevis)
+  const [updating, setUpdating] = useState(false)
   const cfg = STATUT_CONFIG[devis.statut]
   const exp = expiration(devis.envoye_le)
   const nom = devis.demande?.nom_prospect ?? '—'
+  const transitions = TRANSITIONS[devis.statut]
+
+  const changeStatut = useCallback(async (newStatut: StatutDevis) => {
+    setUpdating(true)
+    try {
+      await fetch(`/api/devis/${devis.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut: newStatut }),
+      })
+      const updated = { ...devis, statut: newStatut }
+      if (newStatut === 'envoye' && !devis.envoye_le) updated.envoye_le = new Date().toISOString()
+      setDevis(updated)
+      onStatutChange(devis.id, newStatut)
+    } finally {
+      setUpdating(false)
+    }
+  }, [devis, onStatutChange])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -202,13 +248,35 @@ function DevisDrawer({ devis, onClose }: { devis: DevisRow; onClose: () => void 
             </div>
           </div>
 
-          {/* Statut */}
+          {/* Statut + changement */}
           <div>
             <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>Statut</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: cfg.bg, borderRadius: 10, padding: '10px 14px', border: `1.5px solid ${cfg.border}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: cfg.bg, borderRadius: 10, padding: '10px 14px', border: `1.5px solid ${cfg.border}`, marginBottom: transitions.length > 0 ? 10 : 0 }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.dot }} />
               <span style={{ fontSize: 13, fontWeight: 600, color: cfg.color }}>{cfg.label}</span>
             </div>
+
+            {transitions.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {transitions.map(s => (
+                  <button
+                    key={s}
+                    onClick={() => changeStatut(s)}
+                    disabled={updating}
+                    style={{
+                      flex: 1, padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${TRANSITION_COLOR[s]}20`,
+                      background: `${TRANSITION_COLOR[s]}10`, color: TRANSITION_COLOR[s],
+                      fontSize: 12, fontWeight: 600, cursor: updating ? 'not-allowed' : 'pointer',
+                      opacity: updating ? 0.6 : 1, transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { if (!updating) (e.currentTarget as HTMLButtonElement).style.background = `${TRANSITION_COLOR[s]}20` }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = `${TRANSITION_COLOR[s]}10` }}
+                  >
+                    {STATUT_CONFIG[s].label === 'Signé' ? '✓ Marquer signé' : `→ ${STATUT_CONFIG[s].label}`}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Actions */}
@@ -238,12 +306,20 @@ function DevisDrawer({ devis, onClose }: { devis: DevisRow; onClose: () => void 
 
 // ── Table principale ──────────────────────────────────────
 
-export default function DevisTable({ devis }: { devis: DevisRow[] }) {
+export default function DevisTable({ devis: initialDevis }: { devis: DevisRow[] }) {
+  const router = useRouter()
+  const [devis, setDevis] = useState(initialDevis)
   const [search, setSearch] = useState('')
   const [statut, setStatut] = useState<StatutDevis | 'tous'>('tous')
   const [sort, setSort] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<DevisRow | null>(null)
+
+  const handleStatutChange = useCallback((id: string, newStatut: StatutDevis) => {
+    setDevis(prev => prev.map(d => d.id === id ? { ...d, statut: newStatut } : d))
+    setSelected(prev => prev?.id === id ? { ...prev, statut: newStatut } : prev)
+    router.refresh()
+  }, [router])
 
   const filtered = useMemo(() => {
     return devis
@@ -405,7 +481,7 @@ export default function DevisTable({ devis }: { devis: DevisRow[] }) {
 
       <Pagination page={page} total={filtered.length} pageSize={PAGE_SIZE} onChange={setPage} />
 
-      {selected && <DevisDrawer devis={selected} onClose={() => setSelected(null)} />}
+      {selected && <DevisDrawer devis={selected} onClose={() => setSelected(null)} onStatutChange={handleStatutChange} />}
     </>
   )
 }

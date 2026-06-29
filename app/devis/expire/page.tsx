@@ -17,7 +17,7 @@ export default function DevisExpirePage() {
           Votre devis n&apos;est plus valable. Pas d&apos;inquiétude, vous pouvez faire une nouvelle demande et nous générerons un nouveau devis actualisé.
         </p>
 
-        <a href="https://neotravel.fr" style={{ display: 'inline-block', background: '#1a2138', color: 'white', borderRadius: 28, padding: '12px 24px', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+        <a href="https://neotravel-six.vercel.app" style={{ display: 'inline-block', background: '#1a2138', color: 'white', borderRadius: 28, padding: '12px 24px', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
           Faire une nouvelle demande →
         </a>
       </div>

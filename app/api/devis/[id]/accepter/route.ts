@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { verifyDevisToken } from '@/lib/devis-token'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel.fr'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app'
 
 export async function GET(
   req: Request,
