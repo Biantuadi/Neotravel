@@ -438,9 +438,9 @@ Les variables d'environnement sont à renseigner dans Vercel > Settings > Enviro
 | # | Sujet | État | Description |
 |---|-------|------|-------------|
 | P1-1 | Fix table `clients` | ✅ Résolu | L'override `enregistrer_lead` dans `/api/chat/route.ts` utilisait `onStepFinish` pour capturer le `demande_id` sans dupliquer la logique — `tools.ts` gère désormais l'upsert client complet. |
-| P1-2 | Déploiement Edge Function relances | 🟡 En cours | La fonction `supabase/functions/relancer-prospect/` est écrite et testée. Il reste à l'activer sur le projet Supabase (commande : `npx supabase functions deploy relancer-prospect --project-ref bfqkuwbtqqyisjzrjqep`) et à activer `pg_cron` + `pg_net` dans les extensions. |
-| P1-3 | Authentification dashboard | 🔴 À faire | Le dashboard `/dashboard` est accessible sans login. Protéger avec Supabase Auth (middleware Next.js `matcher: ['/dashboard/:path*']`) ou un simple mot de passe Vercel. |
-| P1-4 | Test bout-en-bout documenté | 🟡 À faire | Valider le parcours complet une fois en conditions réelles depuis le déploiement Vercel : chat → lead → devis → email → relance → dashboard. Consigner le résultat. |
+| P1-2 | Déploiement Edge Function relances | ✅ Résolu | Fonction `relancer-prospect` déployée sur Supabase (4 déploiements, projet `bfqkuwbtqqyisjzrjqep`). Cron pg_cron à activer via `supabase/functions/relancer-prospect/cron-setup.sql`. |
+| P1-3 | Authentification dashboard | 🟡 En cours | Le dashboard `/dashboard` est accessible sans login. Protection en cours d'implémentation (Supabase Auth ou middleware Next.js). |
+| P1-4 | Test bout-en-bout documenté | 🟡 En cours | Validation du parcours complet en conditions réelles : chat → lead → devis → email → relance → dashboard. |
 
 ### P2 — Améliorations prioritaires (prochaine itération)
 
