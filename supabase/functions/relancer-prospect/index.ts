@@ -57,7 +57,7 @@ function footer(footerNote: string): string {
     <tr><td style="border-top:1px solid #e5ebf0;"></td></tr>
     <tr>
       <td style="padding:14px 28px 20px;">
-        <p style="margin:0 0 4px;font-size:11px;color:#707a8c;">Neotravel — Transport de groupe | neotravel.fr</p>
+        <p style="margin:0 0 4px;font-size:11px;color:#707a8c;">Neotravel — Transport de groupe | https://neotravel-six.vercel.app</p>
         <p style="margin:0;font-size:10px;color:#a6adb8;line-height:16px;">${footerNote}</p>
       </td>
     </tr>
@@ -150,7 +150,7 @@ async function htmlRelance2(d: DemandeRow): Promise<string> {
         </td></tr>
       </table>
       <p style="margin:0 0 8px;font-size:13px;color:#14141a;line-height:21px;">Si vous êtes toujours intéressé(e), un simple clic suffit.</p>
-      <p style="margin:0 0 24px;font-size:13px;color:#14141a;line-height:21px;">Si votre projet a changé, pas d'inquiétude&nbsp;: vous pouvez faire une nouvelle demande à tout moment sur neotravel.fr.</p>
+      <p style="margin:0 0 24px;font-size:13px;color:#14141a;line-height:21px;">Si votre projet a changé, pas d'inquiétude&nbsp;: vous pouvez faire une nouvelle demande à tout moment sur https://neotravel-six.vercel.app.</p>
       <p style="margin:0 0 32px;font-size:12px;color:#707a8c;line-height:19px;">Pour toute question urgente, appelez-nous directement au <strong>${PHONE}</strong> — nous répondons en moins de 2 heures.</p>
       <table cellpadding="0" cellspacing="0" role="presentation"><tr>
         <td style="background:#a06cfb;border-radius:28px;">
@@ -191,7 +191,7 @@ function htmlCloture(d: DemandeRow): string {
       <p style="margin:0 0 24px;font-size:13px;color:#14141a;line-height:21px;">Merci pour votre confiance et à bientôt chez NeoTravel&nbsp;!</p>
       <div style="border-top:1px solid #e5ebf0;margin-bottom:16px;"></div>
       <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1a2138;">L'équipe Neotravel</p>
-      <p style="margin:0 0 32px;font-size:11px;color:#707a8c;">contact@neotravel.fr&nbsp; | &nbsp;neotravel.fr&nbsp; | &nbsp;${PHONE}</p>
+      <p style="margin:0 0 32px;font-size:11px;color:#707a8c;">contact@https://neotravel-six.vercel.app&nbsp; | &nbsp;https://neotravel-six.vercel.app&nbsp; | &nbsp;${PHONE}</p>
       <table cellpadding="0" cellspacing="0" role="presentation"><tr>
         <td style="background:#1a2138;border-radius:28px;">
           <a href="${SITE_URL}" style="display:inline-block;padding:13px 24px;font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;white-space:nowrap;">Faire une nouvelle demande →</a>

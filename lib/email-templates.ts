@@ -125,9 +125,9 @@ export function emailInfosManquantes(data: InfosManquantesData): string {
     <!-- Footer -->
     <tr>
       <td style="padding:14px 28px 20px;">
-        <p style="margin:0 0 4px;font-size:11px;color:#707a8c;">Neotravel — Transport de groupe | neotravel.fr</p>
+        <p style="margin:0 0 4px;font-size:11px;color:#707a8c;">Neotravel — Transport de groupe | https://neotravel-six.vercel.app</p>
         <p style="margin:0;font-size:10px;color:#a6adb8;line-height:16px;">
-          Vous recevez cet email suite à une demande sur neotravel.fr — Se désabonner
+          Vous recevez cet email suite à une demande sur https://neotravel-six.vercel.app — Se désabonner
         </p>
       </td>
     </tr>
@@ -282,7 +282,7 @@ export function emailDevis(data: EmailDevisData): string {
     <!-- Footer -->
     <tr>
       <td style="padding:14px 28px 20px;">
-        <p style="margin:0 0 4px;font-size:11px;color:#707a8c;">Neotravel — Transport de groupe | neotravel.fr</p>
+        <p style="margin:0 0 4px;font-size:11px;color:#707a8c;">Neotravel — Transport de groupe | https://neotravel-six.vercel.app</p>
         <p style="margin:0;font-size:10px;color:#a6adb8;line-height:16px;">
           Devis ref. ${devisId} — Généré le ${dateGeneration} — Valable 7 jours
         </p>
@@ -351,9 +351,9 @@ export function emailGenerique(data: EmailGeneriquData): string {
     <!-- Footer -->
     <tr>
       <td style="border-top:1px solid #e5ebf0;padding:14px 28px 20px;">
-        <p style="margin:0 0 4px;font-size:11px;color:#707a8c;">Neotravel — Transport de groupe | neotravel.fr</p>
+        <p style="margin:0 0 4px;font-size:11px;color:#707a8c;">Neotravel — Transport de groupe | https://neotravel-six.vercel.app</p>
         <p style="margin:0;font-size:10px;color:#a6adb8;line-height:16px;">
-          Vous recevez cet email suite à une demande sur neotravel.fr
+          Vous recevez cet email suite à une demande sur https://neotravel-six.vercel.app
         </p>
       </td>
     </tr>
