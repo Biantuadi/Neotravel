@@ -16,7 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* Contenu — décalé pour la sidebar (lg+) et la topbar (mobile) */}
-      <main className="lg:pl-[220px] px-4 sm:px-6 lg:px-10 pt-20 lg:pt-9 pb-10 min-h-screen overflow-auto">
+      <main className="lg:ml-[220px] px-4 sm:px-8 lg:px-10 pt-20 lg:pt-9 pb-10 min-h-screen overflow-auto">
         {children}
       </main>
     </div>
