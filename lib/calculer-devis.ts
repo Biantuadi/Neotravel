@@ -49,10 +49,10 @@ export function coefSaison(mois: number): { niveau: string; valeur: number } {
   return                                    { niveau: 'Très haute',  valeur:  0.15 }
 }
 export function coefUrgence(jours: number): { code: string; valeur: number } {
-  if (jours < 7)  return { code: 'DD_PRIORITAIRE',  valeur:  0.10 }
-  if (jours < 30) return { code: 'DD_URGENT',       valeur:  0.05 }
-  if (jours < 90) return { code: 'DD_NORMAL',       valeur: -0.05 }
-  return                 { code: 'DD_3MOISETPLUS',  valeur: -0.10 }
+  if (jours <= 14) return { code: 'DD_PRIORITAIRE',  valeur:  0.10 }
+  if (jours <= 30) return { code: 'DD_URGENT',       valeur:  0.05 }
+  if (jours <= 90) return { code: 'DD_NORMAL',       valeur: -0.05 }
+  return                  { code: 'DD_3MOISETPLUS',  valeur: -0.10 }
 }
 export function coefCapacite(nb: number): { tranche: string; valeur: number } {
   if (nb <= 19) return { tranche: '≤ 19',   valeur: -0.05 }
