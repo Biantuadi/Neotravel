@@ -9,7 +9,7 @@ export const tools = (demande_id?: string) => ({
   calculer_devis: tool({
     description: 'Calcule le prix d\'un devis de transport de groupe de manière déterministe. Appeler uniquement quand toutes les infos sont collectées.',
     inputSchema: z.object({
-      nbPassagers:   z.number().int().min(1).max(85).describe('Nombre de passagers'),
+      nbPassagers:   z.number().int().min(1).max(59).describe('Nombre de passagers'),
       distanceKm:   z.number().positive().max(1500).describe('Distance en kilomètres'),
       dateDemande:  z.string().describe('Date de la demande au format YYYY-MM-DD'),
       dateDepart:   z.string().describe('Date de départ au format YYYY-MM-DD'),
@@ -158,7 +158,7 @@ export const tools = (demande_id?: string) => ({
       depart:       z.string().optional().describe('Ville de départ'),
       destination:  z.string().optional().describe('Ville de destination'),
       // Paramètres du devis — pour recalculer et générer le PDF
-      nbPassagers:  z.number().int().min(1).max(85),
+      nbPassagers:  z.number().int().min(1).max(59),
       distanceKm:   z.number().positive().max(1500),
       dateDemande:  z.string().describe('Date de la demande YYYY-MM-DD'),
       dateDepart:   z.string().describe('Date de départ YYYY-MM-DD'),

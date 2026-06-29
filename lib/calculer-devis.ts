@@ -7,7 +7,7 @@ const TVA            = 0.10
 const MARGE          = 0.15
 const PRIX_GUIDE_JOUR      = 80
 const PRIX_NUIT_CHAUFFEUR  = 120
-const CAPACITE_MAX   = 85
+const CAPACITE_MAX   = 59
 
 // ── Types ─────────────────────────────────────────────────
 export interface ParamsDevis {
