@@ -309,6 +309,9 @@ function DevisDrawer({ devis: initialDevis, onClose, onStatutChange }: { devis: 
 export default function DevisTable({ devis: initialDevis }: { devis: DevisRow[] }) {
   const router = useRouter()
   const [devis, setDevis] = useState(initialDevis)
+
+  // Sync avec les nouvelles données serveur (après router.refresh)
+  useEffect(() => { setDevis(initialDevis) }, [initialDevis])
   const [search, setSearch] = useState('')
   const [statut, setStatut] = useState<StatutDevis | 'tous'>('tous')
   const [sort, setSort] = useState<'asc' | 'desc'>('desc')
