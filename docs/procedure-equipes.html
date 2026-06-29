@@ -108,6 +108,12 @@
       margin-bottom: 20px;
       padding-bottom: 12px;
       border-bottom: 2px solid #e8f5e9;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .section-title + * {
+      break-before: avoid;
     }
 
     .section-number {
@@ -389,7 +395,7 @@
     </div>
     <h1>Procédure équipes commerciales</h1>
     <div class="header-meta">
-      <span>Version 1.1</span>
+      <span>Version 1.2</span>
       <span>·</span>
       <span>29 juin 2026</span>
       <span>·</span>
@@ -432,7 +438,7 @@
           <div class="step-num">3</div>
           <div class="step-content">
             <strong>Questions de l'assistant</strong>
-            <p>L'assistant pose une question à la fois : ville de départ, destination, date de départ, nombre de passagers, distance en km (demandée explicitement — jamais estimée), options (guide, nuit chauffeur, péages).</p>
+            <p>L'assistant pose une question à la fois : ville de départ, destination, date de départ, nombre de passagers, options (guide, nuit chauffeur, péages). La distance est <strong>calculée automatiquement</strong> depuis les villes saisies — le client n'a pas à la fournir.</p>
           </div>
         </div>
         <div class="step">
@@ -544,11 +550,11 @@
       <div class="pills">
         <div class="pill pill-red">
           <span class="pill-icon">⚡</span>
-          <span><strong>Urgente</strong> — Départ dans moins de 7 jours. À traiter en priorité.</span>
+          <span><strong>Urgente</strong> — Départ dans 30 jours ou moins. À traiter en priorité.</span>
         </div>
         <div class="pill pill-yellow">
           <span class="pill-icon">📋</span>
-          <span><strong>Normale</strong> — Départ dans 7 à 90 jours.</span>
+          <span><strong>Normale</strong> — Départ dans 31 à 90 jours.</span>
         </div>
         <div class="pill pill-green">
           <span class="pill-icon">🗓️</span>
@@ -566,8 +572,8 @@
 
       <p>L'assistant transfère automatiquement le dossier dans deux situations :</p>
       <ul>
-        <li><strong>Plus de 80 passagers</strong> — dépasse la capacité du barème automatique</li>
-        <li><strong>Trajet international</strong> — sort de la zone de service standard</li>
+        <li><strong>Plus de 59 passagers</strong> — dépasse la capacité maximale du barème automatique</li>
+        <li><strong>Trajet international</strong> — sort de la zone de service standard (France métropolitaine)</li>
       </ul>
       <p style="margin-bottom: 16px;">Le statut passe à <strong>« Cas complexe »</strong> et vous recevez une notification.</p>
 

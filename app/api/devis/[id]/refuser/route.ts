@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { supabaseAdmin } from '@/lib/supabase'
 import { verifyDevisToken } from '@/lib/devis-token'
-import { emailConfirmation } from '@/lib/email-templates'
+import { emailCourtoisieRefus } from '@/lib/email-templates'
 
 const SITE_URL   = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app'
 const fromEmail  = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev'
@@ -23,7 +23,7 @@ export async function GET(
 
   const { data: devis, error } = await supabaseAdmin
     .from('devis')
-    .select('id, statut, demande_id, prix_ttc')
+    .select('id, statut, demande_id')
     .eq('id', id)
     .single()
 
@@ -31,53 +31,47 @@ export async function GET(
     return NextResponse.redirect(`${SITE_URL}/devis/invalide`)
   }
 
+  if (devis.statut === 'refuse') {
+    return NextResponse.redirect(`${SITE_URL}/devis/refuse?already=1`)
+  }
+
   if (devis.statut === 'accepte') {
     return NextResponse.redirect(`${SITE_URL}/devis/confirme?already=1`)
   }
 
-  if (devis.statut === 'expire' || devis.statut === 'refuse') {
-    return NextResponse.redirect(`${SITE_URL}/devis/expire`)
-  }
-
-  // Récupère les infos du prospect pour l'email de confirmation
   const { data: demande } = devis.demande_id
     ? await supabaseAdmin
         .from('demandes')
-        .select('nom_prospect, email, depart, destination, date_depart')
+        .select('nom_prospect, email, depart, destination')
         .eq('id', devis.demande_id)
         .single()
     : { data: null }
 
   await Promise.all([
-    supabaseAdmin.from('devis').update({ statut: 'accepte' }).eq('id', id),
+    supabaseAdmin.from('devis').update({ statut: 'refuse' }).eq('id', id),
 
     devis.demande_id
       ? supabaseAdmin.from('demandes')
-          .update({ statut: 'accepte', updated_at: new Date().toISOString() })
+          .update({ statut: 'refuse', updated_at: new Date().toISOString() })
           .eq('id', devis.demande_id)
       : Promise.resolve(),
 
     supabaseAdmin.from('logs').insert({
       demande_id:    devis.demande_id,
-      action:        'devis_accepte_via_email',
+      action:        'devis_refuse_via_email',
       outil_utilise: 'lien_email',
     }),
   ])
 
-  // Email de confirmation au prospect
+  // Email de courtoisie
   if (demande?.email) {
     const resend = new Resend(process.env.RESEND_API_KEY)
     const prenom = (demande.nom_prospect ?? 'Client').split(' ')[0]
-    const dateDepart = demande.date_depart
-      ? new Date(demande.date_depart).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
-      : '—'
 
-    const html = emailConfirmation({
+    const html = emailCourtoisieRefus({
       prenom,
       depart:      demande.depart ?? '—',
       destination: demande.destination ?? '—',
-      dateDepart,
-      montantTTC:  devis.prix_ttc,
       siteUrl:     SITE_URL,
     })
 
@@ -85,11 +79,11 @@ export async function GET(
       from:    fromEmail,
       to:      isTestMode ? testEmail : demande.email,
       subject: isTestMode
-        ? `[TEST → ${demande.email}] ✓ Votre réservation NeoTravel est confirmée`
-        : '✓ Votre réservation NeoTravel est confirmée',
+        ? `[TEST → ${demande.email}] NeoTravel — Nous prenons note de votre décision`
+        : 'NeoTravel — Nous prenons note de votre décision',
       html,
-    }).catch(() => { /* ne bloque pas la redirection si l'email échoue */ })
+    }).catch(() => {})
   }
 
-  return NextResponse.redirect(`${SITE_URL}/devis/confirme`)
+  return NextResponse.redirect(`${SITE_URL}/devis/refuse`)
 }

@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import DevisTable, { type DevisRow } from './DevisTable'
 
 export const metadata: Metadata = { title: 'NeoTravel — Devis' }
-export const revalidate = 30
+export const dynamic = 'force-dynamic'
 
 // ── KPI ──────────────────────────────────────────────────
 

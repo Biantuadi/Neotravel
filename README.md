@@ -107,14 +107,22 @@ Ajouter `RESEND_API_KEY` dans Supabase > Edge Functions > relancer-prospect > Se
 
 > État à la soutenance (1er juillet 2026). Le flux complet est opérationnel : prospect → CRM → devis → email → dashboard → relances.
 
-### P1 — Améliorations prioritaires
+### P1 — Corrections immédiates
+
+| # | Sujet | État |
+|---|-------|------|
+| P1-1 | Persistance devis/client après conversation | ✅ Résolu — `demande_id` passé via ref mutable aux tools |
+| P1-2 | Calcul distance automatique (ORS) | ✅ Résolu — tool `calculer_distance` + détection international |
+| P1-3 | Edge Function relances | ✅ Déployée — projet `bfqkuwbtqqyisjzrjqep` |
+| P1-4 | Acceptation / refus devis en ligne | ✅ Résolu — liens dans l'email → endpoints `/accepter` et `/refuser` |
+
+### P2 — Améliorations prioritaires
 
 | # | Sujet | Description |
 |---|-------|-------------|
-| P2-1 | Acceptation devis en ligne | Lien "J'accepte" dans l'email → statut `accepte` automatique |
-| P2-2 | Notifications commerciaux | Email interne à l'équipe sur `cas_complexe` ou `accepte` |
-| P2-3 | Relances SMS / WhatsApp | Canal prévu dans le schéma (`canal_relance enum`) — brancher Twilio |
-| P2-4 | Stockage PDF Supabase | Stocker les PDFs et renseigner `pdf_url` dans `devis` |
+| P2-1 | Notifications commerciaux | Email interne à l'équipe sur `cas_complexe` ou `accepte` |
+| P2-2 | Relances SMS / WhatsApp | Canal prévu dans le schéma (`canal_relance enum`) — brancher Twilio |
+| P2-3 | Stockage PDF Supabase | Stocker les PDFs et renseigner `pdf_url` dans `devis` |
 
 ### P2 — Évolutions futures
 
@@ -154,4 +162,5 @@ docs/
 
 - **Figma :** [Maquette NeoTravel](https://www.figma.com/design/gpKMpdgnx2Vkh3eeqypJAN/NEOTRAVEL-%E2%80%94-Maquette-Site-Web--copie-?node-id=0-1&p=f&t=1MI9omxJKytwja2W-0)
 - **Journal de décisions :** [`docs/journal-decisions.md`](docs/journal-decisions.md)
-- **Procédure équipes :** [`docs/procedure-equipes.md`](docs/procedure-equipes.md)
+- **Procédure équipes commerciales :** [`docs/procedure-equipes.md`](docs/procedure-equipes.md)
+- **Procédure repreneur (technique) :** [`docs/procedure-repreneur.html`](docs/procedure-repreneur.html)

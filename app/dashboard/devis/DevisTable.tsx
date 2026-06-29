@@ -309,6 +309,18 @@ function DevisDrawer({ devis: initialDevis, onClose, onStatutChange }: { devis: 
 export default function DevisTable({ devis: initialDevis }: { devis: DevisRow[] }) {
   const router = useRouter()
   const [devis, setDevis] = useState(initialDevis)
+
+  // Sync avec les nouvelles données serveur uniquement si la liste change (ex: nouveau devis ajouté)
+  useEffect(() => {
+    setDevis(prev => {
+      // Applique les nouveaux items du serveur mais préserve les statuts mis à jour localement
+      const localUpdates = new Map(prev.map(d => [d.id, d.statut]))
+      return initialDevis.map(d => ({
+        ...d,
+        statut: localUpdates.has(d.id) ? (localUpdates.get(d.id) ?? d.statut) : d.statut,
+      }))
+    })
+  }, [initialDevis])
   const [search, setSearch] = useState('')
   const [statut, setStatut] = useState<StatutDevis | 'tous'>('tous')
   const [sort, setSort] = useState<'asc' | 'desc'>('desc')

@@ -1,6 +1,6 @@
 # NeoTravel — Procédure équipes commerciales
 
-**Version :** 1.1  
+**Version :** 1.2  
 **Date :** 29 juin 2026  
 **Public :** Équipes commerciales et opérationnelles NeoTravel
 
@@ -24,8 +24,9 @@ NeoTravel permet à vos clients d'obtenir un devis transport de groupe en moins 
    - Destination
    - Date de départ
    - Nombre de passagers
-   - Distance en km (l'assistant la demande explicitement — il ne l'estime jamais)
    - Options éventuelles : guide/accompagnateur, nuit chauffeur, péages
+   
+   La distance en km est **calculée automatiquement** par l'assistant depuis les villes saisies — le client n'a pas à la fournir.
 5. Une fois toutes les informations collectées, l'assistant calcule et affiche le montant TTC.
 6. L'assistant propose ensuite d'envoyer le devis détaillé **par email en PDF**. Si le client accepte et fournit son adresse email, il reçoit le document avec une référence unique (ex : NEO-1234567890).
 
@@ -71,8 +72,8 @@ Chaque dossier affiche un score de 0 à 100 %. Ce score indique combien d'inform
 ### Le niveau d'urgence
 
 Chaque dossier est marqué **faible**, **normale** ou **urgente** selon le délai entre la date de la demande et la date de départ :
-- **Urgente** : moins de 7 jours → à traiter en priorité
-- **Normale** : entre 7 et 90 jours
+- **Urgente** : 30 jours ou moins → à traiter en priorité
+- **Normale** : entre 31 et 90 jours
 - **Faible** : plus de 90 jours
 
 ---
@@ -82,8 +83,8 @@ Chaque dossier est marqué **faible**, **normale** ou **urgente** selon le déla
 ### Quand l'assistant escalade-t-il ?
 
 L'assistant transfère automatiquement le dossier à un commercial humain dans deux situations :
-1. **Plus de 80 passagers** — dépasse la capacité du barème automatique
-2. **Trajet international** — sort de la zone de service standard
+1. **Plus de 59 passagers** — dépasse la capacité maximale du barème automatique
+2. **Trajet international** — sort de la zone de service standard (France métropolitaine)
 
 Le statut du dossier passe alors à **"Cas complexe"**, et vous recevez une notification.
 
@@ -99,7 +100,7 @@ Exemple de message d'accroche :
 > *"Bonjour [Prénom], votre demande de transport de groupe depuis NeoTravel a bien été reçue. En raison de la spécificité de votre trajet, notre équipe souhaite vous accompagner directement. Seriez-vous disponible pour un appel ?"*
 
 **Étape 3 — Construire le devis manuellement**  
-Pour les cas hors barème (>80 passagers, trajet international), utilisez votre outil de devis habituel ou consultez votre responsable. NeoTravel ne calcule pas automatiquement ces cas.
+Pour les cas hors barème (>59 passagers, trajet international), utilisez votre outil de devis habituel ou consultez votre responsable. NeoTravel ne calcule pas automatiquement ces cas.
 
 **Étape 4 — Mettre à jour le statut**  
 Une fois le devis envoyé au client, changez le statut dans le tableau de bord :
@@ -160,9 +161,10 @@ Si un dossier reste en "Incomplet" ou "Nouveau lead" depuis plus de 10 jours san
 
 Le parcours complet est opérationnel :
 - Un prospect envoie une demande via le chat → elle est enregistrée dans la base
-- L'IA qualifie la demande, calcule le devis et l'envoie par email en PDF
+- L'IA qualifie la demande, **calcule automatiquement la distance** (via OpenRouteService), calcule le devis et l'envoie par email en PDF
 - Le tableau de bord affiche les KPIs en temps réel
-- Le tarifd est lu depuis la base de données (table `matrices`) — modifiable sans toucher au code
+- Le tarif est lu depuis la base de données (table `matrices`) — modifiable sans toucher au code
+- Le client peut **accepter ou refuser le devis directement depuis l'email** (liens dans le PDF) ; le statut se met à jour automatiquement
 
 ### Ce qui reste à finaliser (P1 — urgent)
 
@@ -175,8 +177,6 @@ Le parcours complet est opérationnel :
 
 | Amélioration | Impact |
 |--------------|--------|
-| **Bouton "J'accepte"** dans l'email du devis | Supprime une étape : le statut passe automatiquement à "Accepté" sans appel téléphonique |
-| **Calcul automatique de la distance** | Plus besoin de demander les kilomètres au prospect — l'IA les calcule depuis les villes |
 | **Notification email à l'équipe** | Alerte immédiate quand un dossier complexe arrive ou qu'un devis est accepté |
 | **Relances WhatsApp / SMS** | Toucher les prospects qui ne lisent pas leurs emails |
 

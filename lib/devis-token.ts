@@ -21,3 +21,8 @@ export function buildAcceptUrl(devisId: string, baseUrl: string): string {
   const token = generateDevisToken(devisId)
   return `${baseUrl}/api/devis/${devisId}/accepter?token=${token}`
 }
+
+export function buildRefusUrl(devisId: string, baseUrl: string): string {
+  const token = generateDevisToken(devisId)
+  return `${baseUrl}/api/devis/${devisId}/refuser?token=${token}`
+}

@@ -8,9 +8,12 @@ const SITE_URL = Deno.env.get('NEXT_PUBLIC_SITE_URL') ?? 'https://neotravel-six.
 const PHONE = Deno.env.get('NEOTRAVEL_PHONE') ?? '01 23 45 67 89'
 const DEVIS_TOKEN_SECRET = Deno.env.get('DEVIS_TOKEN_SECRET') ?? 'neotravel-devis-secret-change-me'
 
-const DELAI_RELANCE_1_JOURS = 2
-const DELAI_RELANCE_2_JOURS = 3
-const DELAI_CLOTURE_JOURS   = 2
+// DEMO_MODE=true → délais de 2 minutes au lieu de J+2/J+3/J+2
+const DEMO_MODE = Deno.env.get('DEMO_MODE') === 'true'
+
+const DELAI_RELANCE_1_MS = DEMO_MODE ? 2 * 60 * 1000          : 2 * 24 * 60 * 60 * 1000
+const DELAI_RELANCE_2_MS = DEMO_MODE ? 2 * 60 * 1000          : 3 * 24 * 60 * 60 * 1000
+const DELAI_CLOTURE_MS   = DEMO_MODE ? 2 * 60 * 1000          : 2 * 24 * 60 * 60 * 1000
 
 // Token HMAC-SHA256 via WebCrypto (Deno compatible)
 async function buildAcceptUrl(devisId: string): Promise<string> {
@@ -57,7 +60,7 @@ function footer(footerNote: string): string {
     <tr><td style="border-top:1px solid #e5ebf0;"></td></tr>
     <tr>
       <td style="padding:14px 28px 20px;">
-        <p style="margin:0 0 4px;font-size:11px;color:#707a8c;">Neotravel — Transport de groupe | neotravel.fr</p>
+        <p style="margin:0 0 4px;font-size:11px;color:#707a8c;">Neotravel — Transport de groupe | https://neotravel-six.vercel.app</p>
         <p style="margin:0;font-size:10px;color:#a6adb8;line-height:16px;">${footerNote}</p>
       </td>
     </tr>
@@ -150,7 +153,7 @@ async function htmlRelance2(d: DemandeRow): Promise<string> {
         </td></tr>
       </table>
       <p style="margin:0 0 8px;font-size:13px;color:#14141a;line-height:21px;">Si vous êtes toujours intéressé(e), un simple clic suffit.</p>
-      <p style="margin:0 0 24px;font-size:13px;color:#14141a;line-height:21px;">Si votre projet a changé, pas d'inquiétude&nbsp;: vous pouvez faire une nouvelle demande à tout moment sur neotravel.fr.</p>
+      <p style="margin:0 0 24px;font-size:13px;color:#14141a;line-height:21px;">Si votre projet a changé, pas d'inquiétude&nbsp;: vous pouvez faire une nouvelle demande à tout moment sur https://neotravel-six.vercel.app.</p>
       <p style="margin:0 0 32px;font-size:12px;color:#707a8c;line-height:19px;">Pour toute question urgente, appelez-nous directement au <strong>${PHONE}</strong> — nous répondons en moins de 2 heures.</p>
       <table cellpadding="0" cellspacing="0" role="presentation"><tr>
         <td style="background:#a06cfb;border-radius:28px;">
@@ -191,7 +194,7 @@ function htmlCloture(d: DemandeRow): string {
       <p style="margin:0 0 24px;font-size:13px;color:#14141a;line-height:21px;">Merci pour votre confiance et à bientôt chez NeoTravel&nbsp;!</p>
       <div style="border-top:1px solid #e5ebf0;margin-bottom:16px;"></div>
       <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1a2138;">L'équipe Neotravel</p>
-      <p style="margin:0 0 32px;font-size:11px;color:#707a8c;">contact@neotravel.fr&nbsp; | &nbsp;neotravel.fr&nbsp; | &nbsp;${PHONE}</p>
+      <p style="margin:0 0 32px;font-size:11px;color:#707a8c;">contact@https://neotravel-six.vercel.app&nbsp; | &nbsp;https://neotravel-six.vercel.app&nbsp; | &nbsp;${PHONE}</p>
       <table cellpadding="0" cellspacing="0" role="presentation"><tr>
         <td style="background:#1a2138;border-radius:28px;">
           <a href="${SITE_URL}" style="display:inline-block;padding:13px 24px;font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;white-space:nowrap;">Faire une nouvelle demande →</a>
@@ -214,7 +217,8 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
   }
 }
 
-function joursEnMs(jours: number): number {
+// Gardé pour compatibilité mais on utilise les constantes directement
+function _joursEnMs(jours: number): number {
   return jours * 24 * 60 * 60 * 1000
 }
 
@@ -239,7 +243,7 @@ Deno.serve(async (req) => {
   const select = 'id, nom_prospect, email, depart, destination, date_depart, devis(id, prix_ttc, created_at, pdf_url)'
 
   // ── 1. Relance 1 ──────────────────────────────────────
-  const cutoff1 = new Date(now.getTime() - joursEnMs(DELAI_RELANCE_1_JOURS)).toISOString()
+  const cutoff1 = new Date(now.getTime() - DELAI_RELANCE_1_MS).toISOString()
   const { data: aRelancer1 } = await supabase
     .from('demandes')
     .select(select)
@@ -274,7 +278,7 @@ Deno.serve(async (req) => {
   }
 
   // ── 2. Relance 2 ──────────────────────────────────────
-  const cutoff2 = new Date(now.getTime() - joursEnMs(DELAI_RELANCE_2_JOURS)).toISOString()
+  const cutoff2 = new Date(now.getTime() - DELAI_RELANCE_2_MS).toISOString()
   const { data: aRelancer2 } = await supabase
     .from('demandes')
     .select(select)
@@ -309,7 +313,7 @@ Deno.serve(async (req) => {
   }
 
   // ── 3. Clôture automatique ────────────────────────────
-  const cutoff3 = new Date(now.getTime() - joursEnMs(DELAI_CLOTURE_JOURS)).toISOString()
+  const cutoff3 = new Date(now.getTime() - DELAI_CLOTURE_MS).toISOString()
   const { data: aCloturer } = await supabase
     .from('demandes')
     .select(select)

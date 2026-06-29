@@ -2,12 +2,13 @@ import { Resend } from 'resend'
 import type { Devis } from '@/lib/calculer-devis'
 import { genererDevisPdf, type CoordonneesProspect } from '@/lib/devis-pdf'
 import { emailDevis } from '@/lib/email-templates'
-import { buildAcceptUrl } from '@/lib/devis-token'
+import { buildAcceptUrl, buildRefusUrl } from '@/lib/devis-token'
 
 export interface EnvoyerEmailDevisParams {
   prospect: CoordonneesProspect & { email: string }
   devis: Devis
   reference?: string
+  devisId?: string   // UUID Supabase pour le lien d'acceptation
   nbPassagers?: number
 }
 
@@ -19,6 +20,7 @@ export async function envoyerEmailDevis({
   prospect,
   devis,
   reference,
+  devisId,
   nbPassagers = 1,
 }: EnvoyerEmailDevisParams): Promise<{ id?: string }> {
   if (!process.env.RESEND_API_KEY) {
@@ -45,7 +47,12 @@ export async function envoyerEmailDevis({
     montantTTC: devis.prixTTC,
     devisId: reference ?? 'N/A',
     dateGeneration: today,
-    ctaUrl: buildAcceptUrl(reference ?? 'unknown', process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app'),
+    ctaUrl: devisId
+      ? buildAcceptUrl(devisId, process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app')
+      : (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app'),
+    refusUrl: devisId
+      ? buildRefusUrl(devisId, process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app')
+      : undefined,
   })
 
   const { data, error } = await resend.emails.send({
