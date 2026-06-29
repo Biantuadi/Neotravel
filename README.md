@@ -394,34 +394,37 @@ Les variables d'environnement sont à renseigner dans Vercel > Settings > Enviro
 
 ## Backlog — Prochaines évolutions
 
+> **État à la soutenance (29 juin 2026).** Le flux complet est opérationnel : prospect → CRM → devis → email → dashboard. Les points ci-dessous sont ce qui reste à faire ou ce qui serait fait si le projet continuait.
+
 ### P1 — Corrections immédiates
 
-| # | Sujet | Description |
-|---|-------|-------------|
-| P1-1 | Fix table `clients` | L'override `enregistrer_lead` dans `/api/chat/route.ts` n'insère pas dans `clients`. La page Dashboard > Clients reste vide. |
-| P1-2 | Déploiement Edge Function | La fonction `relancer-prospect` est écrite mais pas encore déployée sur Supabase. Activer aussi pg_cron + pg_net. |
-| P1-3 | Authentification dashboard | Le dashboard `/dashboard` est accessible sans login. Protéger avec Supabase Auth ou middleware Next.js. |
-| P1-4 | Test bout-en-bout | Valider le parcours complet en conditions réelles : chat → lead → devis → email → relance → dashboard. |
+| # | Sujet | État | Description |
+|---|-------|------|-------------|
+| P1-1 | Fix table `clients` | ✅ Résolu | L'override `enregistrer_lead` dans `/api/chat/route.ts` utilisait `onStepFinish` pour capturer le `demande_id` sans dupliquer la logique — `tools.ts` gère désormais l'upsert client complet. |
+| P1-2 | Déploiement Edge Function relances | 🟡 En cours | La fonction `supabase/functions/relancer-prospect/` est écrite et testée. Il reste à l'activer sur le projet Supabase (commande : `npx supabase functions deploy relancer-prospect --project-ref bfqkuwbtqqyisjzrjqep`) et à activer `pg_cron` + `pg_net` dans les extensions. |
+| P1-3 | Authentification dashboard | 🔴 À faire | Le dashboard `/dashboard` est accessible sans login. Protéger avec Supabase Auth (middleware Next.js `matcher: ['/dashboard/:path*']`) ou un simple mot de passe Vercel. |
+| P1-4 | Test bout-en-bout documenté | 🟡 À faire | Valider le parcours complet une fois en conditions réelles depuis le déploiement Vercel : chat → lead → devis → email → relance → dashboard. Consigner le résultat. |
 
 ### P2 — Améliorations prioritaires (prochaine itération)
 
 | # | Sujet | Description |
 |---|-------|-------------|
-| P2-1 | Acceptation devis en ligne | Ajouter un lien "J'accepte ce devis" dans l'email → page de confirmation → statut `accepte` automatique. |
-| P2-2 | Calcul distance automatique | Intégrer l'API OpenRouteService ou Google Maps pour calculer `distanceKm` sans le demander au prospect. |
-| P2-3 | Notification commerciaux | Envoyer un email interne à l'équipe quand une demande passe en `cas_complexe` ou `accepte`. |
-| P2-4 | Relances SMS / WhatsApp | Le canal est déjà prévu dans le schéma (`canal_relance enum`). Brancher Twilio ou WhatsApp Business API. |
-| P2-5 | Historique client | Afficher toutes les demandes d'un client dans la fiche client du dashboard. |
+| P2-1 | Acceptation devis en ligne | Ajouter un lien "J'accepte ce devis" dans l'email → page de confirmation → statut `accepte` automatique sans intervention humaine. |
+| P2-2 | Calcul distance automatique | Intégrer Google Maps Distance Matrix ou OpenRouteService pour calculer `distanceKm` depuis les villes de départ/arrivée — supprimer la question au prospect. |
+| P2-3 | Notification commerciaux | Envoyer un email interne à l'équipe quand une demande passe en `cas_complexe` ou `accepte` (actuellement invisible sans consulter le dashboard). |
+| P2-4 | Relances SMS / WhatsApp | Le canal est prévu dans le schéma (`canal_relance enum`). Brancher Twilio ou l'API WhatsApp Business pour toucher les prospects qui ne lisent pas leurs emails. |
+| P2-5 | Fiche client complète | Afficher l'historique de toutes les demandes d'un client dans la page `/dashboard/clients/[id]`. |
 
-### P3 — Évolutions futures
+### P3 — Évolutions futures (si le projet continue)
 
 | # | Sujet | Description |
 |---|-------|-------------|
-| P3-1 | Module facturation | Générer une facture PDF depuis un devis accepté et l'envoyer automatiquement. |
-| P3-2 | Chatbot multicanal | Déployer l'agent sur WhatsApp Business ou Messenger (groupes scolaires, associations). |
-| P3-3 | Multi-langue | Traduire le chat prospect en anglais et espagnol pour les groupes internationaux. |
-| P3-4 | Analytics avancés | Tableau de bord taux de conversion, revenue prévisionnel, coût d'acquisition par canal. |
-| P3-5 | Intégration CRM externe | Synchronisation bidirectionnelle avec HubSpot ou Salesforce pour les équipes commerciales avancées. |
+| P3-1 | Module facturation | Générer une facture PDF numérotée depuis un devis accepté et l'envoyer automatiquement avec numéro de bon de commande. |
+| P3-2 | Agent multicanal | Déployer le même agent sur WhatsApp Business ou Messenger, sans changer la logique métier — cibler groupes scolaires et associations. |
+| P3-3 | Multi-langue | Internationaliser le prompt et l'interface (anglais, espagnol) pour les groupes touristiques étrangers en France. |
+| P3-4 | Analytics prédictifs | Revenue prévisionnel, taux de conversion par canal, coût d'acquisition, saisonnalité des demandes. |
+| P3-5 | Intégration CRM externe | Synchronisation bidirectionnelle avec HubSpot ou Salesforce pour les équipes commerciales qui ont déjà un CRM en place. |
+| P3-6 | Stockage PDF Supabase | Stocker les PDF dans Supabase Storage et renseigner `pdf_url` dans la table `devis` pour consultation ultérieure sans re-génération. |
 
 ## Edge Functions — Relances automatiques
 

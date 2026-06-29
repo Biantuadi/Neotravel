@@ -111,7 +111,7 @@ const DESTINATIONS = [
     id: 4, name: 'Mont-Saint-Michel', country: 'France', price: '19',
     badge: 'Promo', badgeColor: '#f97316', rating: '4.8', reviews: 341,
     category: 'Normandie', duration: 'Journée',
-    img: 'https://images.unsplash.com/photo-1589477173271-6f4e1d9e4b0e?w=900&q=85&auto=format&fit=crop',
+    img: 'https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=900&q=85&auto=format&fit=crop',
   },
   {
     id: 5, name: 'Alsace & Route des Vins', country: 'France', price: '22',

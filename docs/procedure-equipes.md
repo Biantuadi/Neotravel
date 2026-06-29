@@ -154,4 +154,38 @@ Si un dossier reste en "Incomplet" ou "Nouveau lead" depuis plus de 10 jours san
 
 ---
 
+## 6. Ce qui n'est pas encore fait — et la suite
+
+### Ce qui fonctionne à la soutenance
+
+Le parcours complet est opérationnel :
+- Un prospect envoie une demande via le chat → elle est enregistrée dans la base
+- L'IA qualifie la demande, calcule le devis et l'envoie par email en PDF
+- Le tableau de bord affiche les KPIs en temps réel
+- Le tarifd est lu depuis la base de données (table `matrices`) — modifiable sans toucher au code
+
+### Ce qui reste à finaliser (P1 — urgent)
+
+| Point | Description |
+|-------|-------------|
+| **Déploiement des relances automatiques** | La fonction est écrite et prête. Il reste à l'activer sur Supabase (opération technique de 5 minutes). En attendant, les relances doivent être faites manuellement. |
+| **Protection du dashboard** | Le tableau de bord est accessible à quiconque a l'URL. Avant la mise en production réelle, il faudra ajouter une authentification (identifiant / mot de passe). |
+
+### Ce qu'on ferait si le projet continuait (P2)
+
+| Amélioration | Impact |
+|--------------|--------|
+| **Bouton "J'accepte"** dans l'email du devis | Supprime une étape : le statut passe automatiquement à "Accepté" sans appel téléphonique |
+| **Calcul automatique de la distance** | Plus besoin de demander les kilomètres au prospect — l'IA les calcule depuis les villes |
+| **Notification email à l'équipe** | Alerte immédiate quand un dossier complexe arrive ou qu'un devis est accepté |
+| **Relances WhatsApp / SMS** | Toucher les prospects qui ne lisent pas leurs emails |
+
+### Ce qu'on ferait à plus long terme (P3)
+
+- Génération automatique de la facture PDF une fois la commande confirmée
+- Version multilingue (anglais, espagnol) pour les groupes touristiques étrangers
+- Connexion à HubSpot ou Salesforce si l'équipe commerciale grandit
+
+---
+
 *Document rédigé dans le cadre du projet EPITECH NeoTravel — MBA1, promotion 2026.*
