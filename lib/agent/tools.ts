@@ -22,13 +22,30 @@ export const tools = (demande_id?: string) => ({
     }),
     execute: async (params) => {
       const resultat = calculerDevis(params as ParamsDevis)
+
       if (demande_id) {
-        await supabaseAdmin.from('logs').insert({
-          demande_id,
-          action: 'calculer_devis',
-          outil_utilise: 'calculer_devis()',
-        })
+        await Promise.all([
+          supabaseAdmin.from('devis').insert({
+            demande_id,
+            prix_ht:  resultat.prixHT,
+            tva:      resultat.tva,
+            prix_ttc: resultat.prixTTC,
+            devise:   resultat.devise,
+            lignes:   resultat.lignes,
+            statut:   'brouillon',
+          }),
+          supabaseAdmin.from('logs').insert({
+            demande_id,
+            action: 'calculer_devis',
+            outil_utilise: 'calculer_devis()',
+          }),
+          supabaseAdmin.from('demandes').update({
+            statut: 'qualifie',
+            updated_at: new Date().toISOString(),
+          }).eq('id', demande_id),
+        ])
       }
+
       return resultat
     },
   }),
@@ -49,15 +66,69 @@ export const tools = (demande_id?: string) => ({
     execute: async (params) => {
       const champs = ['nom_prospect', 'email', 'telephone', 'nb_passagers', 'depart', 'destination', 'date_depart']
       const score = Math.round(champs.filter(c => params[c as keyof typeof params] != null).length / champs.length * 100)
+      const now = new Date().toISOString()
 
+      // 1. Upsert client (match sur email si présent, sinon toujours créer)
+      let client_id: string | null = null
+      if (params.email) {
+        const { data: existing } = await supabaseAdmin
+          .from('clients')
+          .select('id, nb_demandes')
+          .eq('email', params.email)
+          .maybeSingle()
+
+        if (existing) {
+          await supabaseAdmin.from('clients').update({
+            nom: params.nom_prospect,
+            telephone: params.telephone ?? undefined,
+            nb_demandes: existing.nb_demandes + 1,
+            derniere_demande: now,
+            updated_at: now,
+          }).eq('id', existing.id)
+          client_id = existing.id
+        } else {
+          const { data: created } = await supabaseAdmin
+            .from('clients')
+            .insert({
+              nom: params.nom_prospect,
+              email: params.email,
+              telephone: params.telephone ?? null,
+              nb_demandes: 1,
+              derniere_demande: now,
+            })
+            .select('id')
+            .single()
+          client_id = created?.id ?? null
+        }
+      } else {
+        // Pas d'email — créer un client anonyme quand même pour traçabilité
+        const { data: created } = await supabaseAdmin
+          .from('clients')
+          .insert({
+            nom: params.nom_prospect,
+            telephone: params.telephone ?? null,
+            nb_demandes: 1,
+            derniere_demande: now,
+          })
+          .select('id')
+          .single()
+        client_id = created?.id ?? null
+      }
+
+      // 2. Créer la demande liée au client
       const { data, error } = await supabaseAdmin
         .from('demandes')
-        .insert({ ...params, statut: 'nouveau_lead', score_completude: score })
+        .insert({
+          ...params,
+          client_id,
+          statut: 'nouveau_lead',
+          score_completude: score,
+        })
         .select('id')
         .single()
 
       if (error) return { success: false, error: error.message }
-      return { success: true, demande_id: data.id }
+      return { success: true, demande_id: data.id, client_id }
     },
   }),
 
@@ -121,15 +192,24 @@ export const tools = (demande_id?: string) => ({
       })
 
       if (demande_id) {
-        await supabaseAdmin.from('logs').insert({
-          demande_id,
-          action: 'devis_envoye_email',
-          outil_utilise: 'envoyer_devis_par_email()',
-        })
-        await supabaseAdmin
-          .from('demandes')
-          .update({ statut: 'devis_envoye', updated_at: new Date().toISOString() })
-          .eq('id', demande_id)
+        const sentAt = new Date().toISOString()
+        await Promise.all([
+          supabaseAdmin.from('logs').insert({
+            demande_id,
+            action: 'devis_envoye_email',
+            outil_utilise: 'envoyer_devis_par_email()',
+          }),
+          supabaseAdmin.from('demandes').update({
+            statut: 'devis_envoye',
+            updated_at: sentAt,
+          }).eq('id', demande_id),
+          // Passer le devis de "brouillon" à "envoye"
+          supabaseAdmin.from('devis').update({
+            statut: 'envoye',
+            envoye_le: sentAt,
+            updated_at: sentAt,
+          }).eq('demande_id', demande_id).eq('statut', 'brouillon'),
+        ])
       }
 
       return {
