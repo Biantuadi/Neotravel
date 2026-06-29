@@ -21,7 +21,7 @@ export const tools = (demande_id?: string) => ({
       }).optional(),
     }),
     execute: async (params) => {
-      const resultat = calculerDevis(params as ParamsDevis)
+      const resultat = await calculerDevis(params as ParamsDevis)
 
       if (demande_id) {
         await Promise.all([
@@ -169,7 +169,7 @@ export const tools = (demande_id?: string) => ({
       }).optional(),
     }),
     execute: async (params) => {
-      const devis = calculerDevis({
+      const devis = await calculerDevis({
         nbPassagers: params.nbPassagers,
         distanceKm:  params.distanceKm,
         dateDemande: params.dateDemande,
