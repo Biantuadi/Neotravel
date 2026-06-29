@@ -2,6 +2,7 @@ import { Resend } from 'resend'
 import type { Devis } from '@/lib/calculer-devis'
 import { genererDevisPdf, type CoordonneesProspect } from '@/lib/devis-pdf'
 import { emailDevis } from '@/lib/email-templates'
+import { buildAcceptUrl } from '@/lib/devis-token'
 
 export interface EnvoyerEmailDevisParams {
   prospect: CoordonneesProspect & { email: string }
@@ -44,7 +45,7 @@ export async function envoyerEmailDevis({
     montantTTC: devis.prixTTC,
     devisId: reference ?? 'N/A',
     dateGeneration: today,
-    ctaUrl: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel.fr',
+    ctaUrl: buildAcceptUrl(reference ?? 'unknown', process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel.fr'),
   })
 
   const { data, error } = await resend.emails.send({

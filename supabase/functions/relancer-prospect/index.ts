@@ -6,10 +6,25 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
 const FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') ?? 'NeoTravel <onboarding@resend.dev>'
 const SITE_URL = Deno.env.get('NEXT_PUBLIC_SITE_URL') ?? 'https://neotravel.fr'
 const PHONE = Deno.env.get('NEOTRAVEL_PHONE') ?? '01 23 45 67 89'
+const DEVIS_TOKEN_SECRET = Deno.env.get('DEVIS_TOKEN_SECRET') ?? 'neotravel-devis-secret-change-me'
 
 const DELAI_RELANCE_1_JOURS = 2
 const DELAI_RELANCE_2_JOURS = 3
 const DELAI_CLOTURE_JOURS   = 2
+
+// Token HMAC-SHA256 via WebCrypto (Deno compatible)
+async function buildAcceptUrl(devisId: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(DEVIS_TOKEN_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(devisId))
+  const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32)
+  return `${SITE_URL}/api/devis/${devisId}/accepter?token=${hex}`
+}
 
 interface DemandeRow {
   id: string
@@ -18,7 +33,7 @@ interface DemandeRow {
   depart?: string
   destination?: string
   date_depart?: string
-  devis?: { id: string; prix_ttc: number; created_at: string }[] | null
+  devis?: { id: string; prix_ttc: number; created_at: string; pdf_url?: string | null }[] | null
 }
 
 // ── Header commun ─────────────────────────────────────────
@@ -64,7 +79,7 @@ function fmtMoney(n: number): string {
 }
 
 // ── Template Relance 1 ────────────────────────────────────
-function htmlRelance1(d: DemandeRow): string {
+async function htmlRelance1(d: DemandeRow): Promise<string> {
   const prenom = d.nom_prospect.split(' ')[0]
   const depart = d.depart ?? '—'
   const destination = d.destination ?? '—'
@@ -72,6 +87,8 @@ function htmlRelance1(d: DemandeRow): string {
   const montant = devis ? fmtMoney(devis.prix_ttc) : '—'
   const dateEnvoi = devis ? fmtDate(devis.created_at) : '—'
   const dateDepart = fmtDate(d.date_depart)
+  // CTA : PDF si dispo, sinon page d'acceptation
+  const ctaUrl = devis?.pdf_url ?? (devis ? await buildAcceptUrl(devis.id) : SITE_URL)
 
   return wrap(`
   ${header('#ed8f1a')}
@@ -95,7 +112,7 @@ function htmlRelance1(d: DemandeRow): string {
       <p style="margin:0 0 32px;font-size:12px;color:#707a8c;line-height:19px;">Nous pouvons également organiser un appel si vous le souhaitez au <strong>${PHONE}</strong>.</p>
       <table cellpadding="0" cellspacing="0" role="presentation"><tr>
         <td style="background:#ed8f1a;border-radius:28px;">
-          <a href="${SITE_URL}" style="display:inline-block;padding:13px 24px;font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;white-space:nowrap;">Voir mon devis →</a>
+          <a href="${ctaUrl}" style="display:inline-block;padding:13px 24px;font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;white-space:nowrap;">Voir mon devis →</a>
         </td>
       </tr></table>
     </td></tr>
@@ -103,12 +120,13 @@ function htmlRelance1(d: DemandeRow): string {
 }
 
 // ── Template Relance 2 ────────────────────────────────────
-function htmlRelance2(d: DemandeRow): string {
+async function htmlRelance2(d: DemandeRow): Promise<string> {
   const prenom = d.nom_prospect.split(' ')[0]
   const depart = d.depart ?? '—'
   const destination = d.destination ?? '—'
   const devis = d.devis?.[0]
   const montant = devis ? fmtMoney(devis.prix_ttc) : '—'
+  const acceptUrl = devis ? await buildAcceptUrl(devis.id) : SITE_URL
   const dateExpiration = devis
     ? fmtDate(new Date(new Date(devis.created_at).getTime() + 7 * 86400000).toISOString())
     : '—'
@@ -136,7 +154,7 @@ function htmlRelance2(d: DemandeRow): string {
       <p style="margin:0 0 32px;font-size:12px;color:#707a8c;line-height:19px;">Pour toute question urgente, appelez-nous directement au <strong>${PHONE}</strong> — nous répondons en moins de 2 heures.</p>
       <table cellpadding="0" cellspacing="0" role="presentation"><tr>
         <td style="background:#a06cfb;border-radius:28px;">
-          <a href="${SITE_URL}" style="display:inline-block;padding:13px 24px;font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;white-space:nowrap;">Confirmer mon devis →</a>
+          <a href="${acceptUrl}" style="display:inline-block;padding:13px 24px;font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;white-space:nowrap;">Confirmer mon devis →</a>
         </td>
       </tr></table>
     </td></tr>
@@ -218,7 +236,7 @@ Deno.serve(async (req) => {
   }
 
   // Sélection enrichie avec données devis
-  const select = 'id, nom_prospect, email, depart, destination, date_depart, devis(id, prix_ttc, created_at)'
+  const select = 'id, nom_prospect, email, depart, destination, date_depart, devis(id, prix_ttc, created_at, pdf_url)'
 
   // ── 1. Relance 1 ──────────────────────────────────────
   const cutoff1 = new Date(now.getTime() - joursEnMs(DELAI_RELANCE_1_JOURS)).toISOString()
@@ -234,7 +252,7 @@ Deno.serve(async (req) => {
       await sendEmail(
         d.email,
         'Votre devis NeoTravel — Avez-vous pu le consulter ?',
-        htmlRelance1(d),
+        await htmlRelance1(d),
       )
       const sentAt = new Date().toISOString()
       await Promise.all([
@@ -269,7 +287,7 @@ Deno.serve(async (req) => {
       await sendEmail(
         d.email,
         'NeoTravel — Dernière relance avant clôture de votre dossier',
-        htmlRelance2(d),
+        await htmlRelance2(d),
       )
       const sentAt = new Date().toISOString()
       await Promise.all([
