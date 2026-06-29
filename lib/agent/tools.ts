@@ -18,7 +18,9 @@ async function geocodeVille(ville: string, apiKey: string): Promise<{ coords: [n
   }
 }
 
-export const tools = (demande_id?: string) => ({
+// demandeRef est une référence mutable : sa valeur est mise à jour dans onStepFinish
+// après que enregistrer_lead retourne le demande_id, sans recréer les closures.
+export const tools = (demandeRef: { current: string | undefined }) => ({
   calculer_distance: tool({
     description: 'Calcule la distance routière en km entre deux villes. Appeler AUTOMATIQUEMENT dès que la ville de départ et la ville de destination sont connues, sans demander la distance au prospect.',
     inputSchema: z.object({
@@ -92,11 +94,12 @@ export const tools = (demande_id?: string) => ({
     }),
     execute: async (params) => {
       const resultat = await calculerDevis(params as ParamsDevis)
+      const did = demandeRef.current
 
-      if (demande_id) {
+      if (did) {
         await Promise.all([
           supabaseAdmin.from('devis').insert({
-            demande_id,
+            demande_id: did,
             prix_ht:  resultat.prixHT,
             tva:      resultat.tva,
             prix_ttc: resultat.prixTTC,
@@ -105,14 +108,14 @@ export const tools = (demande_id?: string) => ({
             statut:   'brouillon',
           }),
           supabaseAdmin.from('logs').insert({
-            demande_id,
+            demande_id: did,
             action: 'calculer_devis',
             outil_utilise: 'calculer_devis()',
           }),
           supabaseAdmin.from('demandes').update({
             statut: 'qualifie',
             updated_at: new Date().toISOString(),
-          }).eq('id', demande_id),
+          }).eq('id', did),
         ])
       }
 
@@ -138,7 +141,7 @@ export const tools = (demande_id?: string) => ({
       const score = Math.round(champs.filter(c => params[c as keyof typeof params] != null).length / champs.length * 100)
       const now = new Date().toISOString()
 
-      // 1. Upsert client (match sur email si présent, sinon toujours créer)
+      // 1. Upsert client
       let client_id: string | null = null
       if (params.email) {
         const { data: existing } = await supabaseAdmin
@@ -171,7 +174,6 @@ export const tools = (demande_id?: string) => ({
           client_id = created?.id ?? null
         }
       } else {
-        // Pas d'email — créer un client anonyme quand même pour traçabilité
         const { data: created } = await supabaseAdmin
           .from('clients')
           .insert({
@@ -189,7 +191,15 @@ export const tools = (demande_id?: string) => ({
       const { data, error } = await supabaseAdmin
         .from('demandes')
         .insert({
-          ...params,
+          nom_prospect:       params.nom_prospect,
+          email:              params.email ?? null,
+          telephone:          params.telephone ?? null,
+          nb_passagers:       params.nb_passagers ?? null,
+          depart:             params.depart ?? null,
+          destination:        params.destination ?? null,
+          date_depart:        params.date_depart ?? null,
+          date_retour:        params.date_retour ?? null,
+          commentaire_client: params.commentaire_client ?? null,
           client_id,
           statut: 'nouveau_lead',
           score_completude: score,
@@ -198,6 +208,10 @@ export const tools = (demande_id?: string) => ({
         .single()
 
       if (error) return { success: false, error: error.message }
+
+      // Mettre à jour la ref pour que les tools suivants (calculer_devis, etc.) aient le bon id
+      demandeRef.current = data.id
+
       return { success: true, demande_id: data.id, client_id }
     },
   }),
@@ -227,7 +241,6 @@ export const tools = (demande_id?: string) => ({
       email:        z.string().email().describe('Email du prospect'),
       depart:       z.string().optional().describe('Ville de départ'),
       destination:  z.string().optional().describe('Ville de destination'),
-      // Paramètres du devis — pour recalculer et générer le PDF
       nbPassagers:  z.number().int().min(1).max(59),
       distanceKm:   z.number().positive(),
       dateDemande:  z.string().describe('Date de la demande YYYY-MM-DD'),
@@ -261,24 +274,24 @@ export const tools = (demande_id?: string) => ({
         reference,
       })
 
-      if (demande_id) {
+      const did = demandeRef.current
+      if (did) {
         const sentAt = new Date().toISOString()
         await Promise.all([
           supabaseAdmin.from('logs').insert({
-            demande_id,
+            demande_id: did,
             action: 'devis_envoye_email',
             outil_utilise: 'envoyer_devis_par_email()',
           }),
           supabaseAdmin.from('demandes').update({
             statut: 'devis_envoye',
             updated_at: sentAt,
-          }).eq('id', demande_id),
-          // Passer le devis de "brouillon" à "envoye"
+          }).eq('id', did),
           supabaseAdmin.from('devis').update({
             statut: 'envoye',
             envoye_le: sentAt,
             updated_at: sentAt,
-          }).eq('demande_id', demande_id).eq('statut', 'brouillon'),
+          }).eq('demande_id', did).eq('statut', 'brouillon'),
         ])
       }
 
@@ -297,14 +310,15 @@ export const tools = (demande_id?: string) => ({
       raison:     z.string(),
       contexte:   z.string(),
     }),
-    execute: async ({ demande_id, raison }) => {
-      if (demande_id) {
+    execute: async ({ raison }) => {
+      const did = demandeRef.current
+      if (did) {
         await supabaseAdmin
           .from('demandes')
           .update({ statut: 'cas_complexe', updated_at: new Date().toISOString() })
-          .eq('id', demande_id)
+          .eq('id', did)
         await supabaseAdmin.from('logs').insert({
-          demande_id,
+          demande_id: did,
           action: 'escalade_humain',
           outil_utilise: 'escalader_humain()',
           erreur: raison,
