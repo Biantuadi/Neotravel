@@ -389,9 +389,9 @@
     </div>
     <h1>Procédure équipes commerciales</h1>
     <div class="header-meta">
-      <span>Version 1.0</span>
+      <span>Version 1.1</span>
       <span>·</span>
-      <span>26 juin 2026</span>
+      <span>29 juin 2026</span>
       <span>·</span>
       <span>Usage interne — équipes commerciales et opérationnelles</span>
     </div>
@@ -432,14 +432,21 @@
           <div class="step-num">3</div>
           <div class="step-content">
             <strong>Questions de l'assistant</strong>
-            <p>L'assistant pose une question à la fois : ville de départ, destination, date de départ, nombre de passagers, distance, options (guide, nuit chauffeur, péages).</p>
+            <p>L'assistant pose une question à la fois : ville de départ, destination, date de départ, nombre de passagers, distance en km (demandée explicitement — jamais estimée), options (guide, nuit chauffeur, péages).</p>
           </div>
         </div>
         <div class="step">
           <div class="step-num">4</div>
           <div class="step-content">
-            <strong>Devis automatique</strong>
-            <p>Une fois toutes les informations collectées, l'assistant calcule et affiche le devis. <strong>Vous n'avez rien à faire à ce stade.</strong></p>
+            <strong>Calcul et affichage du montant TTC</strong>
+            <p>L'assistant calcule le devis et affiche le montant. <strong>Vous n'avez rien à faire à ce stade.</strong></p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <strong>Envoi du PDF par email</strong>
+            <p>L'assistant propose d'envoyer le devis détaillé par email. Si le client accepte, il reçoit un PDF avec une référence unique (ex&nbsp;: NEO-1234567890).</p>
           </div>
         </div>
       </div>
@@ -451,6 +458,8 @@
         <div class="section-number">2</div>
         <h2>Lire le tableau de bord commercial</h2>
       </div>
+
+      <p style="margin-bottom:14px;">Le tableau de bord affiche une vue agrégée en temps réel : <strong>KPIs</strong> (leads du jour, taux de conversion, délai moyen, relances en attente), <strong>pipeline</strong> des devis, indicateurs d'automatisation et de relances. La section <strong>Demandes</strong> dans le menu latéral liste les dossiers individuels.</p>
 
       <h3>Les statuts de dossier</h3>
       <table>
@@ -483,8 +492,13 @@
             <td><span class="badge-action badge-watch">Surveiller</span></td>
           </tr>
           <tr>
-            <td>Relance J+2 / J+7</td>
-            <td>Relances automatiques envoyées</td>
+            <td>Relance 1</td>
+            <td>Première relance automatique (J+2 urgent / J+3 standard)</td>
+            <td><span class="badge-action badge-none">Aucune</span></td>
+          </tr>
+          <tr>
+            <td>Relance 2</td>
+            <td>Deuxième relance automatique (J+7)</td>
             <td><span class="badge-action badge-none">Aucune</span></td>
           </tr>
           <tr>
