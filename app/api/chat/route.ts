@@ -13,10 +13,12 @@ export async function POST(req: Request) {
     content: m.content,
   }))
 
-  let capturedDemandeId: string | undefined = demande_id as string | undefined
+  // Ref mutable partagée avec toutes les closures des tools.
+  // enregistrer_lead met à jour demandeRef.current directement dans son execute,
+  // ce qui permet aux tools suivants (calculer_devis, etc.) de lire le bon id.
+  const demandeRef = { current: demande_id as string | undefined }
 
-  // On utilise directement les outils complets (enregistrer_lead fait déjà l'upsert clients)
-  const allTools = makeTools(capturedDemandeId)
+  const allTools = makeTools(demandeRef)
 
   const result = streamText({
     model: gateway('anthropic/claude-sonnet-4-5'),
@@ -24,15 +26,6 @@ export async function POST(req: Request) {
     messages: coreMessages,
     tools: allTools,
     stopWhen: isStepCount(10),
-    onStepFinish({ toolResults }) {
-      // Capturer le demande_id dès qu'enregistrer_lead répond
-      for (const tr of (toolResults ?? [])) {
-        if (tr.toolName === 'enregistrer_lead' && 'output' in tr) {
-          const res = (tr as { output: Record<string, unknown> }).output
-          if (res?.demande_id) capturedDemandeId = res.demande_id as string
-        }
-      }
-    },
   })
 
   const textStream = result.toTextStreamResponse()
@@ -46,8 +39,8 @@ export async function POST(req: Request) {
         while (true) {
           const { done, value } = await reader.read()
           if (done) {
-            if (capturedDemandeId) {
-              controller.enqueue(new TextEncoder().encode(` DEMANDE_ID:${capturedDemandeId} `))
+            if (demandeRef.current) {
+              controller.enqueue(new TextEncoder().encode(` DEMANDE_ID:${demandeRef.current} `))
             }
             controller.close()
             break

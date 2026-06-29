@@ -33,9 +33,11 @@ async function getClientsData() {
     supabaseAdmin.from('clients')
       .select(`
         id, nom, email, telephone, nb_demandes, derniere_demande, created_at,
-        demandes ( id, depart, destination, date_depart, statut ),
-        devis:demandes ( devis ( id, prix_ttc, statut ) ),
-        relances:demandes ( relances ( id, type, date_programmee, statut ) )
+        demandes (
+          id, depart, destination, date_depart, statut,
+          devis ( id, prix_ttc, statut ),
+          relances ( id, type, date_programmee, statut )
+        )
       `)
       .order('derniere_demande', { ascending: false, nullsFirst: false })
       .limit(300),
@@ -45,17 +47,15 @@ async function getClientsData() {
       .gte('created_at', startOfMonth.toISOString()),
   ])
 
-  // Aplatir les devis et relances (imbiqués dans demandes)
+  // Les devis et relances sont imbriqués dans chaque demande
   const clientRows: ClientRow[] = (clients ?? []).map(c => {
-    const rawDemandes = (c.demandes ?? []) as {
+    type RawDemande = {
       id: string; depart: string | null; destination: string | null;
       date_depart: string | null; statut: string;
       devis?: { id: string; prix_ttc: number; statut: string }[]
       relances?: { id: string; type: string; date_programmee: string; statut: string }[]
-    }[]
-
-    const devis = rawDemandes.flatMap(d => d.devis ?? [])
-    const relances = rawDemandes.flatMap(d => d.relances ?? [])
+    }
+    const rawDemandes = (c.demandes ?? []) as RawDemande[]
 
     return {
       id: c.id,
@@ -68,8 +68,8 @@ async function getClientsData() {
       demandes: rawDemandes.map(({ id, depart, destination, date_depart, statut }) => ({
         id, depart, destination, date_depart, statut,
       })),
-      devis,
-      relances,
+      devis:    rawDemandes.flatMap(d => d.devis ?? []),
+      relances: rawDemandes.flatMap(d => d.relances ?? []),
     }
   })
 
