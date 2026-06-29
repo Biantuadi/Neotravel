@@ -5,7 +5,60 @@ import type { ParamsDevis } from '@/lib/calculer-devis'
 import { supabaseAdmin } from '@/lib/supabase'
 import { envoyerEmailDevis } from '@/lib/email-devis'
 
+async function geocodeVille(ville: string, apiKey: string): Promise<[number, number] | null> {
+  const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(ville)}&size=1&layers=locality,county,region`
+  const res = await fetch(url)
+  if (!res.ok) return null
+  const data = await res.json()
+  if (!data.features?.length) return null
+  return data.features[0].geometry.coordinates as [number, number] // [lng, lat]
+}
+
 export const tools = (demande_id?: string) => ({
+  calculer_distance: tool({
+    description: 'Calcule la distance routière en km entre deux villes. Appeler AUTOMATIQUEMENT dès que la ville de départ et la ville de destination sont connues, sans demander la distance au prospect.',
+    inputSchema: z.object({
+      depart:      z.string().describe('Ville de départ (ex: "Paris", "Lyon")'),
+      destination: z.string().describe('Ville de destination'),
+    }),
+    execute: async ({ depart, destination }) => {
+      const apiKey = process.env.ORS_API_KEY
+      if (!apiKey) {
+        return { success: false, error: 'ORS_API_KEY manquante — demande la distance au prospect.' }
+      }
+
+      try {
+        const [coordsDepart, coordsDest] = await Promise.all([
+          geocodeVille(depart, apiKey),
+          geocodeVille(destination, apiKey),
+        ])
+
+        if (!coordsDepart) return { success: false, error: `Ville de départ introuvable : ${depart}` }
+        if (!coordsDest)  return { success: false, error: `Ville de destination introuvable : ${destination}` }
+
+        const res = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
+          method: 'POST',
+          headers: {
+            Authorization: apiKey,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ coordinates: [coordsDepart, coordsDest] }),
+        })
+
+        if (!res.ok) throw new Error(`ORS ${res.status}`)
+
+        const data = await res.json()
+        const distanceKm = Math.round(data.routes[0].summary.distance / 1000)
+        const dureeMin   = Math.round(data.routes[0].summary.duration  / 60)
+
+        return { success: true, distanceKm, dureeMin }
+      } catch (e) {
+        return { success: false, error: String(e) }
+      }
+    },
+  }),
+
   calculer_devis: tool({
     description: 'Calcule le prix d\'un devis de transport de groupe de manière déterministe. Appeler uniquement quand toutes les infos sont collectées.',
     inputSchema: z.object({
