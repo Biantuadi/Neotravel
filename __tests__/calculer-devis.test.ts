@@ -1,64 +1,59 @@
 import { calculerDevis, coefSaison, coefUrgence, coefCapacite } from "@/lib/calculer-devis";
 
 describe("calculerDevis — cas nominaux", () => {
-  test("cas simple : prix correct et devis auditable", () => {
-    const d = calculerDevis({ nbPassagers: 40, distanceKm: 200, dateDemande: "2026-09-01", dateDepart: "2026-10-01" });
-    expect(d.prixHT).toBeCloseTo(546.25, 2);
-    expect(d.prixTTC).toBeCloseTo(600.88, 2);
+  test("cas simple", () => {
+    const d = calculerDevis({ nb_passagers: 40, distance_km: 200, date_demande: "2026-09-01", date_depart: "2026-10-01", options: [] });
+    expect(d.prix_ht).toBeCloseTo(546.25, 2);
+    expect(d.prix_ttc).toBeCloseTo(600.88, 2);
     expect(d.tva).toBeCloseTo(54.63, 2);
     expect(d.devise).toBe("EUR");
-    expect(d.coefficients.saison.niveau).toBe("Moyenne");
-    expect(d.coefficients.capacite.valeur).toBe(0);
+    expect(d.coefficients.capacite).toBe(0);
     const somme = d.lignes.reduce((s, l) => s + l.montant, 0);
-    expect(somme).toBeCloseTo(d.prixTTC, 2);
+    expect(somme).toBeCloseTo(d.prix_ttc, 2);
   });
-
-  test("demande urgente : majoration prioritaire (+10 %)", () => {
-    const d = calculerDevis({ nbPassagers: 50, distanceKm: 300, dateDemande: "2026-07-01", dateDepart: "2026-07-04" });
-    expect(d.coefficients.urgence.code).toBe("DD_PRIORITAIRE");
-    expect(d.coefficients.urgence.valeur).toBe(0.10);
-    expect(d.coefficients.saison.niveau).toBe("Haute");
-    expect(d.prixTTC).toBeCloseTo(1147.99, 2);
+  test("demande urgente", () => {
+    const d = calculerDevis({ nb_passagers: 50, distance_km: 300, date_demande: "2026-07-01", date_depart: "2026-07-04", options: [] });
+    expect(d.coefficients.urgence).toBe(0.1);
+    expect(d.coefficients.saison).toBe(0.1);
+    expect(d.prix_ttc).toBeCloseTo(1147.99, 2);
   });
-
-  test("options (nuit + guide + péages) : lignes et total corrects", () => {
-    const d = calculerDevis({ nbPassagers: 30, distanceKm: 400, dateDemande: "2026-08-01", dateDepart: "2026-12-10", options: { nuitsChauffeur: 1, guideJours: 2, peages: 60 } });
-    expect(d.lignes.find(l => l.libelle.includes("Nuit"))?.montant).toBe(120);
-    expect(d.lignes.find(l => l.libelle.includes("Guide"))?.montant).toBe(160);
-    expect(d.lignes.find(l => l.libelle.includes("Péages"))?.montant).toBe(60);
-    expect(d.prixTTC).toBeCloseTo(1568.60, 2);
+  test("toutes les options (guide + nuit + péages)", () => {
+    const d = calculerDevis({ nb_passagers: 30, distance_km: 400, date_demande: "2026-08-01", date_depart: "2026-12-10", options: ["guide", "nuit_chauffeur", "peages"] });
+    expect(d.lignes.find((l) => l.libelle.includes("Guide"))?.montant).toBe(80);
+    expect(d.lignes.find((l) => l.libelle.includes("Nuit"))?.montant).toBe(120);
+    expect(d.lignes.find((l) => l.libelle.includes("Péages"))?.montant).toBe(80);
+    expect(d.prix_ttc).toBeCloseTo(1492.7, 2);
   });
-
-  test("gros volume (80 passagers) : +40 % capacité", () => {
-    const d = calculerDevis({ nbPassagers: 80, distanceKm: 250, dateDemande: "2026-05-01", dateDepart: "2026-06-01" });
-    expect(d.coefficients.capacite.valeur).toBe(0.40);
-    expect(d.prixTTC).toBeCloseTo(1209.26, 2);
+  test("gros volume 80 passagers", () => {
+    const d = calculerDevis({ nb_passagers: 80, distance_km: 250, date_demande: "2026-05-01", date_depart: "2026-06-01", options: [] });
+    expect(d.coefficients.capacite).toBe(0.4);
+    expect(d.prix_ttc).toBeCloseTo(1209.26, 2);
   });
 });
 
-describe("calculerDevis — cas limites (erreur attendue)", () => {
+describe("calculerDevis — cas limites", () => {
   test("0 passager", () => {
-    expect(() => calculerDevis({ nbPassagers: 0, distanceKm: 200, dateDemande: "2026-05-01", dateDepart: "2026-06-01" })).toThrow(/passagers/i);
+    expect(() => calculerDevis({ nb_passagers: 0, distance_km: 200, date_demande: "2026-05-01", date_depart: "2026-06-01", options: [] })).toThrow(/passagers/i);
   });
-  test("dépassement de capacité (95)", () => {
-    expect(() => calculerDevis({ nbPassagers: 95, distanceKm: 200, dateDemande: "2026-05-01", dateDepart: "2026-06-01" })).toThrow(/capacit|barème/i);
+  test("dépassement capacité", () => {
+    expect(() => calculerDevis({ nb_passagers: 95, distance_km: 200, date_demande: "2026-05-01", date_depart: "2026-06-01", options: [] })).toThrow(/capacit|barème/i);
   });
-  test("hors zone (distance trop grande)", () => {
-    expect(() => calculerDevis({ nbPassagers: 40, distanceKm: 2000, dateDemande: "2026-05-01", dateDepart: "2026-06-01" })).toThrow(/hors zone/i);
+  test("hors zone", () => {
+    expect(() => calculerDevis({ nb_passagers: 40, distance_km: 2000, date_demande: "2026-05-01", date_depart: "2026-06-01", options: [] })).toThrow(/hors zone/i);
   });
   test("dates incohérentes", () => {
-    expect(() => calculerDevis({ nbPassagers: 40, distanceKm: 200, dateDemande: "2026-06-10", dateDepart: "2026-06-01" })).toThrow(/incohérent/i);
+    expect(() => calculerDevis({ nb_passagers: 40, distance_km: 200, date_demande: "2026-06-10", date_depart: "2026-06-01", options: [] })).toThrow(/incohérent/i);
   });
-  test("distance invalide (0 km)", () => {
-    expect(() => calculerDevis({ nbPassagers: 40, distanceKm: 0, dateDemande: "2026-05-01", dateDepart: "2026-06-01" })).toThrow(/distance/i);
+  test("distance invalide", () => {
+    expect(() => calculerDevis({ nb_passagers: 40, distance_km: 0, date_demande: "2026-05-01", date_depart: "2026-06-01", options: [] })).toThrow(/distance/i);
   });
 });
 
-describe("matrices : bornes", () => {
+describe("matrices", () => {
   test("saison", () => {
     expect(coefSaison(6).niveau).toBe("Très haute");
     expect(coefSaison(1).valeur).toBe(-0.07);
-    expect(coefSaison(7).valeur).toBe(0.10);
+    expect(coefSaison(7).valeur).toBe(0.1);
     expect(coefSaison(10).valeur).toBe(0);
   });
   test("urgence", () => {
@@ -71,7 +66,7 @@ describe("matrices : bornes", () => {
     expect(coefCapacite(19).valeur).toBe(-0.05);
     expect(coefCapacite(53).valeur).toBe(0);
     expect(coefCapacite(63).valeur).toBe(0.15);
-    expect(coefCapacite(67).valeur).toBe(0.20);
-    expect(coefCapacite(85).valeur).toBe(0.40);
+    expect(coefCapacite(67).valeur).toBe(0.2);
+    expect(coefCapacite(85).valeur).toBe(0.4);
   });
 });
