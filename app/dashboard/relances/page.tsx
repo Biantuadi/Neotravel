@@ -44,19 +44,19 @@ async function getRelancesData() {
 
     // Sans réponse : envoyées mais demande toujours en relance_1 ou relance_2
     supabaseAdmin.from('relances')
-      .select('id, demande:demande_id(statut)')
+      .select('id, demandes(statut)')
       .eq('statut', 'envoyee'),
 
     // Répondues : envoyées dont la demande est accepte ou refuse
     supabaseAdmin.from('relances')
-      .select('id, demande:demande_id(statut)')
+      .select('id, demandes(statut)')
       .eq('statut', 'envoyee'),
 
     // Liste pour la table
     supabaseAdmin.from('relances')
       .select(`
-        id, type, date_programmee, envoyee_le, statut, created_at,
-        demande:demande_id ( nom_prospect, statut )
+        id, type, date_programmee, statut, created_at,
+        demandes ( nom_prospect, statut )
       `)
       .order('date_programmee', { ascending: false })
       .limit(200),
@@ -65,11 +65,11 @@ async function getRelancesData() {
   // Calcul manuel depuis les données
   const allEnvoyees = sansReponseResult.data ?? []
   const repondues = allEnvoyees.filter(r => {
-    const dem = r.demande as unknown as { statut: string } | null
+    const dem = r.demandes as unknown as { statut: string } | null
     return dem?.statut === 'accepte' || dem?.statut === 'refuse'
   }).length
   const sansReponse = allEnvoyees.filter(r => {
-    const dem = r.demande as unknown as { statut: string } | null
+    const dem = r.demandes as unknown as { statut: string } | null
     return dem?.statut === 'relance_1' || dem?.statut === 'relance_2' || dem?.statut === 'devis_envoye'
   }).length
 
@@ -82,7 +82,10 @@ async function getRelancesData() {
     sansReponse,
     repondues,
     tauxReponse,
-    relances: (relances ?? []) as unknown as RelanceRow[],
+    relances: (relances ?? []).map((r: Record<string, unknown>) => ({
+      ...r,
+      demande: r.demandes ?? null,
+    })) as unknown as RelanceRow[],
   }
 }
 
