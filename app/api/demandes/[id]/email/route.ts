@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server'
 const resend = new Resend(process.env.RESEND_API_KEY)
 const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev'
 const isTestMode = fromEmail.includes('resend.dev')
-const testRedirectTo = process.env.RESEND_TEST_EMAIL ?? 'biantuadikevin@gmail.com'
+const testRedirectTo = process.env.RESEND_TEST_EMAIL ?? 'guilleminotpaul54@gmail.com'
 
 export async function POST(
   _req: Request,

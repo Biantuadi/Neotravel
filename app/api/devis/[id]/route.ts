@@ -9,7 +9,7 @@ type Statut = typeof STATUTS_VALIDES[number]
 const SITE_URL   = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app'
 const fromEmail  = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev'
 const isTestMode = fromEmail.includes('resend.dev')
-const testEmail  = process.env.RESEND_TEST_EMAIL ?? 'biantuadikevin@gmail.com'
+const testEmail  = process.env.RESEND_TEST_EMAIL ?? 'guilleminotpaul54@gmail.com'
 
 export async function PATCH(
   req: Request,
