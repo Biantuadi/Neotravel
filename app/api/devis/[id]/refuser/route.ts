@@ -47,14 +47,14 @@ export async function GET(
         .single()
     : { data: null }
 
-  await Promise.all([
+  const [r1, r2] = await Promise.all([
     supabaseAdmin.from('devis').update({ statut: 'refuse' }).eq('id', id),
 
     devis.demande_id
       ? supabaseAdmin.from('demandes')
           .update({ statut: 'refuse', updated_at: new Date().toISOString() })
           .eq('id', devis.demande_id)
-      : Promise.resolve(),
+      : Promise.resolve({ error: null }),
 
     supabaseAdmin.from('logs').insert({
       demande_id:    devis.demande_id,
@@ -62,6 +62,9 @@ export async function GET(
       outil_utilise: 'lien_email',
     }),
   ])
+
+  if (r1?.error) console.error('[refuser] devis update error:', r1.error)
+  if (r2?.error) console.error('[refuser] demande update error:', r2.error)
 
   // Email de courtoisie
   if (demande?.email) {

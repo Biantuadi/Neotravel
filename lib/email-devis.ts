@@ -2,7 +2,8 @@ import { Resend } from 'resend'
 import type { Devis } from '@/lib/calculer-devis'
 import { genererDevisPdf, type CoordonneesProspect } from '@/lib/devis-pdf'
 import { emailDevis } from '@/lib/email-templates'
-import { buildAcceptUrl, buildRefusUrl } from '@/lib/devis-token'
+import { buildAcceptUrl, buildRefusUrl, generateDevisToken } from '@/lib/devis-token'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export interface EnvoyerEmailDevisParams {
   prospect: CoordonneesProspect & { email: string }
@@ -35,6 +36,18 @@ export async function envoyerEmailDevis({
   const prenom = prospect.nom.split(' ')[0]
   const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
 
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app'
+  const ctaUrl = devisId ? buildAcceptUrl(devisId, baseUrl) : baseUrl
+  const refusUrl = devisId ? buildRefusUrl(devisId, baseUrl) : undefined
+
+  // Stocker les tokens en DB pour que la fonction edge puisse les réutiliser
+  if (devisId) {
+    await supabaseAdmin.from('devis').update({
+      accept_token: generateDevisToken(devisId),
+      refuse_token: generateDevisToken(devisId + '_refuse'),
+    }).eq('id', devisId)
+  }
+
   const html = emailDevis({
     prenom,
     depart: prospect.depart ?? '—',
@@ -47,12 +60,8 @@ export async function envoyerEmailDevis({
     montantTTC: devis.prixTTC,
     devisId: reference ?? 'N/A',
     dateGeneration: today,
-    ctaUrl: devisId
-      ? buildAcceptUrl(devisId, process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app')
-      : (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app'),
-    refusUrl: devisId
-      ? buildRefusUrl(devisId, process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app')
-      : undefined,
+    ctaUrl,
+    refusUrl,
   })
 
   const { data, error } = await resend.emails.send({

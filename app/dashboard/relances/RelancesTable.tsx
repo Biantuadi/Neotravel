@@ -107,43 +107,6 @@ function BoutonDeclencher() {
 
   return (
     <div style={{ marginBottom: 20 }}>
-      {/* Bandeau démo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#fefce8', border: '1.5px solid #fde047', borderRadius: 12, padding: '12px 16px', marginBottom: result ? 10 : 0 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#eab308', flexShrink: 0 }} />
-        <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#713f12' }}>Mode démo actif</p>
-          <p style={{ margin: 0, fontSize: 11, color: '#854d0e' }}>Délais réduits à 2 minutes (prod : J+2 / J+3 / J+2)</p>
-        </div>
-        <button
-          onClick={declencher}
-          disabled={state === 'loading'}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: state === 'loading' ? '#e2e8f0' : '#1a2138',
-            color: state === 'loading' ? '#94a3b8' : 'white',
-            border: 'none', borderRadius: 8, padding: '8px 16px',
-            fontSize: 12, fontWeight: 600, cursor: state === 'loading' ? 'not-allowed' : 'pointer',
-            transition: 'all 0.15s', whiteSpace: 'nowrap',
-          }}
-        >
-          {state === 'loading' ? (
-            <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: 'spin 1s linear infinite' }}>
-                <path d="M21 12a9 9 0 11-6.219-8.56"/>
-              </svg>
-              Envoi en cours…
-            </>
-          ) : (
-            <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <polygon points="5 3 19 12 5 21 5 3"/>
-              </svg>
-              Déclencher les relances
-            </>
-          )}
-        </button>
-        <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
-      </div>
 
       {/* Résultat */}
       {result && state === 'success' && (
@@ -160,8 +123,11 @@ function BoutonDeclencher() {
             </div>
           ))}
           {result.erreurs.length > 0 && (
-            <div style={{ fontSize: 11, color: '#dc2626', padding: '6px 12px', background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 8 }}>
-              {result.erreurs.length} erreur(s)
+            <div style={{ fontSize: 11, color: '#dc2626', padding: '8px 12px', background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 8, maxWidth: 600 }}>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>{result.erreurs.length} erreur(s) :</div>
+              {result.erreurs.map((e, i) => (
+                <div key={i} style={{ fontFamily: 'monospace', fontSize: 10, lineHeight: 1.5, wordBreak: 'break-all' }}>{e}</div>
+              ))}
             </div>
           )}
         </div>

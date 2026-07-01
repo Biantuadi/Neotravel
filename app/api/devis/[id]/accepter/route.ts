@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { supabaseAdmin } from '@/lib/supabase'
-import { verifyDevisToken } from '@/lib/devis-token'
+import { verifyDevisToken, generateDevisToken } from '@/lib/devis-token'
 import { emailConfirmation } from '@/lib/email-templates'
 
 const SITE_URL   = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://neotravel-six.vercel.app'
@@ -18,6 +18,7 @@ export async function GET(
   const token = searchParams.get('token') ?? ''
 
   if (!verifyDevisToken(id, token)) {
+    console.error(`[accepter] token invalide — id: ${id}, token reçu: ${token}, attendu: ${generateDevisToken(id)}`)
     return NextResponse.redirect(`${SITE_URL}/devis/invalide`)
   }
 
@@ -48,14 +49,14 @@ export async function GET(
         .single()
     : { data: null }
 
-  await Promise.all([
+  const [r1, r2] = await Promise.all([
     supabaseAdmin.from('devis').update({ statut: 'accepte' }).eq('id', id),
 
     devis.demande_id
       ? supabaseAdmin.from('demandes')
           .update({ statut: 'accepte', updated_at: new Date().toISOString() })
           .eq('id', devis.demande_id)
-      : Promise.resolve(),
+      : Promise.resolve({ error: null }),
 
     supabaseAdmin.from('logs').insert({
       demande_id:    devis.demande_id,
@@ -63,6 +64,9 @@ export async function GET(
       outil_utilise: 'lien_email',
     }),
   ])
+
+  if (r1?.error) console.error('[accepter] devis update error:', r1.error)
+  if (r2?.error) console.error('[accepter] demande update error:', r2.error)
 
   // Email de confirmation au prospect
   if (demande?.email) {

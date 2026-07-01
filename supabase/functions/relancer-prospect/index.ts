@@ -4,6 +4,8 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
 const FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') ?? 'NeoTravel <onboarding@resend.dev>'
+const IS_TEST_MODE = FROM_EMAIL.includes('resend.dev')
+const TEST_EMAIL = Deno.env.get('RESEND_TEST_EMAIL') ?? 'biantuadikevin@gmail.com'
 const SITE_URL = Deno.env.get('NEXT_PUBLIC_SITE_URL') ?? 'https://neotravel-six.vercel.app'
 const PHONE = Deno.env.get('NEOTRAVEL_PHONE') ?? '01 23 45 67 89'
 const DEVIS_TOKEN_SECRET = Deno.env.get('DEVIS_TOKEN_SECRET') ?? 'neotravel-devis-secret-change-me'
@@ -16,7 +18,7 @@ const DELAI_RELANCE_2_MS = DEMO_MODE ? 2 * 60 * 1000          : 3 * 24 * 60 * 60
 const DELAI_CLOTURE_MS   = DEMO_MODE ? 2 * 60 * 1000          : 2 * 24 * 60 * 60 * 1000
 
 // Token HMAC-SHA256 via WebCrypto (Deno compatible)
-async function buildAcceptUrl(devisId: string): Promise<string> {
+async function buildHmacToken(devisId: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(DEVIS_TOKEN_SECRET),
@@ -25,8 +27,7 @@ async function buildAcceptUrl(devisId: string): Promise<string> {
     ['sign'],
   )
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(devisId))
-  const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32)
-  return `${SITE_URL}/api/devis/${devisId}/accepter?token=${hex}`
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32)
 }
 
 interface DemandeRow {
@@ -36,7 +37,7 @@ interface DemandeRow {
   depart?: string
   destination?: string
   date_depart?: string
-  devis?: { id: string; prix_ttc: number; created_at: string; pdf_url?: string | null }[] | null
+  devis?: { id: string; prix_ttc: number; created_at: string; pdf_url?: string | null; accept_token?: string | null; refuse_token?: string | null }[] | null
 }
 
 // ── Header commun ─────────────────────────────────────────
@@ -91,7 +92,8 @@ async function htmlRelance1(d: DemandeRow): Promise<string> {
   const dateEnvoi = devis ? fmtDate(devis.created_at) : '—'
   const dateDepart = fmtDate(d.date_depart)
   // CTA : PDF si dispo, sinon page d'acceptation
-  const ctaUrl = devis?.pdf_url ?? (devis ? await buildAcceptUrl(devis.id) : SITE_URL)
+  const acceptToken = devis?.accept_token ?? (devis ? await buildHmacToken(devis.id) : null)
+  const ctaUrl = devis?.pdf_url ?? (devis && acceptToken ? `${SITE_URL}/api/devis/${devis.id}/accepter?token=${acceptToken}` : SITE_URL)
 
   return wrap(`
   ${header('#ed8f1a')}
@@ -129,7 +131,8 @@ async function htmlRelance2(d: DemandeRow): Promise<string> {
   const destination = d.destination ?? '—'
   const devis = d.devis?.[0]
   const montant = devis ? fmtMoney(devis.prix_ttc) : '—'
-  const acceptUrl = devis ? await buildAcceptUrl(devis.id) : SITE_URL
+  const acceptToken2 = devis?.accept_token ?? (devis ? await buildHmacToken(devis.id) : null)
+  const acceptUrl = devis && acceptToken2 ? `${SITE_URL}/api/devis/${devis.id}/accepter?token=${acceptToken2}` : SITE_URL
   const dateExpiration = devis
     ? fmtDate(new Date(new Date(devis.created_at).getTime() + 7 * 86400000).toISOString())
     : '—'
@@ -206,10 +209,12 @@ function htmlCloture(d: DemandeRow): string {
 
 // ── Envoi via Resend ─────────────────────────────────────
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  const recipient = IS_TEST_MODE ? TEST_EMAIL : to
+  const finalSubject = IS_TEST_MODE ? `[TEST → ${to}] ${subject}` : subject
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
+    body: JSON.stringify({ from: FROM_EMAIL, to: recipient, subject: finalSubject, html }),
   })
   if (!res.ok) {
     const err = await res.text()
@@ -223,12 +228,7 @@ function _joursEnMs(jours: number): number {
 }
 
 // ── Handler ─────────────────────────────────────────────
-Deno.serve(async (req) => {
-  const auth = req.headers.get('Authorization') ?? ''
-  if (!auth.includes(SUPABASE_SERVICE_ROLE_KEY)) {
-    return new Response('Unauthorized', { status: 401 })
-  }
-
+Deno.serve(async (_req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
   const now = new Date()
 
@@ -240,7 +240,7 @@ Deno.serve(async (req) => {
   }
 
   // Sélection enrichie avec données devis
-  const select = 'id, nom_prospect, email, depart, destination, date_depart, devis(id, prix_ttc, created_at, pdf_url)'
+  const select = 'id, nom_prospect, email, depart, destination, date_depart, devis(id, prix_ttc, created_at, pdf_url, accept_token, refuse_token)'
 
   // ── 1. Relance 1 ──────────────────────────────────────
   const cutoff1 = new Date(now.getTime() - DELAI_RELANCE_1_MS).toISOString()
